@@ -1,0 +1,131 @@
+html,
+body,
+#app {
+  margin: 0;
+  height: 100%;
+}
+
+.layout-container {
+  height: 100vh;
+}
+
+.layout-aside {
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--el-border-color-light);
+  background: var(--el-bg-color);
+  transition: width 0.3s;
+  overflow: hidden;
+}
+
+.layout-logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 60px;
+  padding: 0 20px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--el-text-color-primary);
+  border-bottom: 1px solid var(--el-border-color-lighter);
+  white-space: nowrap;
+  overflow: hidden;
+
+  &.is-collapse {
+    justify-content: center;
+    padding: 0;
+  }
+}
+
+.layout-menu {
+  flex: 1;
+  border-right: none;
+  overflow-y: auto;
+}
+
+.layout-footer {
+  padding: 12px 20px;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+  border-top: 1px solid var(--el-border-color-lighter);
+  white-space: nowrap;
+  overflow: hidden;
+
+  &.is-collapse {
+    text-align: center;
+    padding: 12px 0;
+  }
+}
+
+.layout-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid var(--el-border-color-light);
+  background: var(--el-bg-color);
+}
+
+.layout-header-title {
+  flex: 1;
+  min-width: 0;
+
+  h2 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    line-height: 1.4;
+  }
+
+  p {
+    margin: 0;
+    font-size: 13px;
+    color: var(--el-text-color-secondary);
+  }
+}
+
+.layout-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.layout-main {
+  background: var(--el-bg-color-page);
+}
+
+.page-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.page-card-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.page-pagination {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+.log-output {
+  width: 100%;
+
+  :deep(.el-textarea__inner) {
+    font-family: Consolas, Monaco, monospace;
+    font-size: 13px;
+  }
+}
+
+.action-card {
+  width: 100%;
+}
+
+.settings-form {
+  max-width: 560px;
+}

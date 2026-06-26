@@ -13,7 +13,7 @@
 ## 技术栈
 
 - 后端：Node.js + Fastify
-- 前端：Bootstrap 5
+- 前端：Vue 3 + Vite + Element Plus（前后端分离）
 - 数据库：LowDB（JSON 文件）
 
 ## 快速开始
@@ -32,10 +32,25 @@ cp .env.example .env
 
 默认数据库文件为 `data/db.json`，首次启动自动创建。
 
-### 3. 启动服务
+### 3. 开发模式
+
+前后端分离开发，需分别启动：
 
 ```bash
+# 终端 1：启动后端 API（端口 3000）
 npm run dev
+
+# 终端 2：启动前端开发服务器（端口 5173，自动代理 /api）
+npm run dev:frontend
+```
+
+访问 http://localhost:5173
+
+### 4. 生产模式
+
+```bash
+npm run build:frontend
+npm start
 ```
 
 访问 http://localhost:3000
