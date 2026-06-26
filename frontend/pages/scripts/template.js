@@ -22,7 +22,7 @@ export function renderContent() {
           '<thead>' +
             '<tr>' +
               '<th style="width: 16%">名称</th>' +
-              '<th style="width: 12%">适用系统</th>' +
+              '<th style="width: 12%">适用终端</th>' +
               '<th style="width: 24%">描述</th>' +
               '<th style="width: 12%">操作</th>' +
               '<th style="width: 36%">动作</th>' +
@@ -81,7 +81,7 @@ export function renderModals() {
                 '<textarea class="form-control" id="scriptDesc" rows="2" placeholder="脚本描述"></textarea>' +
               '</div>' +
               '<div class="mb-3">' +
-                '<label class="form-label">适用系统</label>' +
+                '<label class="form-label">适用终端</label>' +
                 '<div>' +
                   '<div class="form-check form-check-inline">' +
                     '<input class="form-check-input" type="radio" name="scriptPlatform" id="platformWindowCmd" value="window-cmd" checked>' +
