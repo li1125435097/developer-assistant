@@ -1,0 +1,66 @@
+{
+  "name": "developer-assistant-electron",
+  "version": "1.0.0",
+  "description": "开发者脚本助手 Electron 桌面壳",
+  "main": "dist/main.js",
+  "private": true,
+  "scripts": {
+    "build:ts": "tsc -p tsconfig.json",
+    "start": "npm run build:ts && electron .",
+    "build": "npm run build:ts && electron-builder --publish never",
+    "build:dir": "npm run build:ts && electron-builder --dir --publish never",
+    "build:win": "npm run build:ts && electron-builder --win --publish never",
+    "build:mac": "npm run build:ts && electron-builder --mac --publish never",
+    "build:linux": "npm run build:ts && electron-builder --linux --publish never"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.30",
+    "electron": "^35.1.2",
+    "electron-builder": "^25.1.8",
+    "typescript": "^5.8.3"
+  },
+  "build": {
+    "appId": "com.developer-assistant.app",
+    "productName": "开发助手",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "config.json",
+      "config.example.json"
+    ],
+    "extraResources": [
+      {
+        "from": "config.example.json",
+        "to": "config.example.json"
+      }
+    ],
+    "win": {
+      "icon": "build/icon.ico",
+      "target": [
+        "nsis"
+      ],
+      "signAndEditExecutable": false
+    },
+    "mac": {
+      "icon": "build/icon.png",
+      "target": [
+        "dmg"
+      ],
+      "category": "public.app-category.developer-tools"
+    },
+    "linux": {
+      "icon": "build/icon.png",
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Development"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
+}

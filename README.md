@@ -85,3 +85,7 @@ npm start
   "variables": { "host": "user@example.com" }
 }
 ```
+
+
+如果只需要可运行目录、不要安装包，可以用：
+npm run build:dir --prefix electron

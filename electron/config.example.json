@@ -1,0 +1,10 @@
+{
+  "url": "http://localhost:3000",
+  "window": {
+    "title": "开发者脚本助手",
+    "width": 1280,
+    "height": 800,
+    "minWidth": 800,
+    "minHeight": 600
+  }
+}

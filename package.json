@@ -12,7 +12,12 @@
     "db:push": "drizzle-kit push --config backend/drizzle.config.ts",
     "dev:frontend": "npm run dev --prefix frontend",
     "build:frontend": "npm run build --prefix frontend",
-    "postinstall": "npm install --prefix frontend"
+    "dev:electron": "npm run start --prefix electron",
+    "build:electron": "npm run build --prefix electron",
+    "build:electron:win": "npm run build:win --prefix electron",
+    "build:electron:mac": "npm run build:mac --prefix electron",
+    "build:electron:linux": "npm run build:linux --prefix electron",
+    "postinstall": "npm install --prefix frontend && npm install --prefix electron"
   },
   "keywords": [
     "scripts",
