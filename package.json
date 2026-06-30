@@ -9,6 +9,9 @@
     "dev": "tsx watch backend/src/index.ts",
     "dev:frontend": "npm run dev --prefix frontend",
     "dev:electron": "npm run start --prefix electron",
+    "dev:agent": "npm run dev --prefix agent",
+    "build:agent": "npm run build --prefix agent",
+    "agent:demo": "npm run demo --prefix agent",
     "build:backend": "tsc -p backend/tsconfig.json",
     "build:frontend": "npm run build --prefix frontend",
     "build:electron": "npm run build --prefix electron",
@@ -16,7 +19,7 @@
     "build:electron:mac": "npm run build:mac --prefix electron",
     "build:electron:linux": "npm run build:linux --prefix electron",
     "move": "npm run build:backend && npm run build:frontend && node scripts/move.mjs",
-    "postinstall": "npm install --prefix frontend && npm install --prefix electron",
+    "postinstall": "npm install --prefix frontend && npm install --prefix electron && npm install --prefix agent",
     "db:generate": "drizzle-kit generate --config backend/drizzle.config.ts",
     "db:push": "drizzle-kit push --config backend/drizzle.config.ts"
   },
