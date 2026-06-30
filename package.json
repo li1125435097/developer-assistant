@@ -7,17 +7,18 @@
   "scripts": {
     "start": "node backend/dist/index.js",
     "dev": "tsx watch backend/src/index.ts",
-    "build:backend": "tsc -p backend/tsconfig.json",
-    "db:generate": "drizzle-kit generate --config backend/drizzle.config.ts",
-    "db:push": "drizzle-kit push --config backend/drizzle.config.ts",
     "dev:frontend": "npm run dev --prefix frontend",
-    "build:frontend": "npm run build --prefix frontend",
     "dev:electron": "npm run start --prefix electron",
+    "build:backend": "tsc -p backend/tsconfig.json",
+    "build:frontend": "npm run build --prefix frontend",
     "build:electron": "npm run build --prefix electron",
     "build:electron:win": "npm run build:win --prefix electron",
     "build:electron:mac": "npm run build:mac --prefix electron",
     "build:electron:linux": "npm run build:linux --prefix electron",
-    "postinstall": "npm install --prefix frontend && npm install --prefix electron"
+    "move": "npm run build:backend && npm run build:frontend && node scripts/move.mjs",
+    "postinstall": "npm install --prefix frontend && npm install --prefix electron",
+    "db:generate": "drizzle-kit generate --config backend/drizzle.config.ts",
+    "db:push": "drizzle-kit push --config backend/drizzle.config.ts"
   },
   "keywords": [
     "scripts",

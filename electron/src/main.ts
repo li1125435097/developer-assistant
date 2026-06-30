@@ -1,7 +1,25 @@
 import { app, BrowserWindow, shell } from 'electron';
+import { fork, type ChildProcess } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import type { AppConfig } from './types';
+
+let serverProcess: ChildProcess | undefined;
+
+function startServer(): void {
+  const serverEntry = path.join(__dirname, 'server/index.js');
+
+  serverProcess = fork(serverEntry, [], {
+    stdio: 'inherit',
+    env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' },
+  });
+
+  serverProcess.on('error', (error) => {
+    console.error('Failed to start server:', error);
+  });
+}
+
+startServer();
 
 const DEFAULT_CONFIG: AppConfig = {
   url: 'http://localhost:3000',
@@ -101,4 +119,8 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit();
   }
+});
+
+app.on('before-quit', () => {
+  serverProcess?.kill();
 });

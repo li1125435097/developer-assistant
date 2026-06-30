@@ -5,7 +5,7 @@
   "main": "dist/main.js",
   "private": true,
   "scripts": {
-    "build:ts": "tsc -p tsconfig.json",
+    "build:ts": "tsc -p tsconfig.json && node ../scripts/sync-electron-runtime.mjs",
     "start": "npm run build:ts && electron .",
     "build": "npm run build:ts && electron-builder --publish never",
     "build:dir": "npm run build:ts && electron-builder --dir --publish never",

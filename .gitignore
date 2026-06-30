@@ -148,3 +148,5 @@ vite.config.ts.timestamp-*
 # Electron
 electron/node_modules/
 electron/release/
+electron/src/server/
+electron/src/webapp/
