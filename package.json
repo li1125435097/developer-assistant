@@ -19,7 +19,6 @@
     "build:electron:mac": "npm run build:mac --prefix electron",
     "build:electron:linux": "npm run build:linux --prefix electron",
     "move": "npm run build:backend && npm run build:frontend && node scripts/move.mjs",
-    "postinstall": "npm install --prefix frontend && npm install --prefix electron && npm install --prefix agent",
     "db:generate": "drizzle-kit generate --config backend/drizzle.config.ts",
     "db:push": "drizzle-kit push --config backend/drizzle.config.ts"
   },

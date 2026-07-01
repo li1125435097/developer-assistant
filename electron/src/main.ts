@@ -1,17 +1,41 @@
 import { app, BrowserWindow, shell } from 'electron';
 import { fork, type ChildProcess } from 'node:child_process';
+import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import type { AppConfig } from './types';
 
 let serverProcess: ChildProcess | undefined;
 
+function getAppDataDir(): string {
+  return path.join(app.getPath('userData'), 'data');
+}
+
+function getServerNodeModulesPath(): string {
+  if (app.isPackaged) {
+    return path.join(process.resourcesPath, 'app.asar', 'node_modules');
+  }
+
+  return path.join(__dirname, '..', 'node_modules');
+}
+
 function startServer(): void {
   const serverEntry = path.join(__dirname, 'server/index.js');
+  const serverEnv: NodeJS.ProcessEnv = {
+    ...process.env,
+    ELECTRON_RUN_AS_NODE: '1',
+    NODE_PATH: getServerNodeModulesPath(),
+  };
+
+  if (app.isPackaged) {
+    const dataDir = getAppDataDir();
+    serverEnv.DATABASE_DIR = path.join(dataDir, 'pglite');
+    serverEnv.LEGACY_DATABASE_PATH = path.join(dataDir, 'db.json');
+  }
 
   serverProcess = fork(serverEntry, [], {
     stdio: 'inherit',
-    env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' },
+    env: serverEnv,
   });
 
   serverProcess.on('error', (error) => {
@@ -19,7 +43,28 @@ function startServer(): void {
   });
 }
 
-startServer();
+function waitForServer(port: number, timeoutMs = 30_000): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+
+  return new Promise((resolve, reject) => {
+    const probe = () => {
+      const req = http.get(`http://127.0.0.1:${port}/`, (res) => {
+        res.resume();
+        resolve();
+      });
+
+      req.on('error', () => {
+        if (Date.now() >= deadline) {
+          reject(new Error(`本地服务在 ${timeoutMs}ms 内未在端口 ${port} 上就绪`));
+          return;
+        }
+        setTimeout(probe, 200);
+      });
+    };
+
+    probe();
+  });
+}
 
 const DEFAULT_CONFIG: AppConfig = {
   url: 'http://localhost:3000',
@@ -70,9 +115,12 @@ function loadConfig(): AppConfig {
   return config;
 }
 
-function createWindow(): void {
+async function createWindow(): Promise<void> {
   const config = loadConfig();
   const { window: windowConfig, url } = config;
+  const port = Number(new URL(url).port) || 3000;
+
+  await waitForServer(port);
 
   const win = new BrowserWindow({
     width: windowConfig.width,
@@ -106,11 +154,12 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
-  createWindow();
+  startServer();
+  void createWindow();
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
+      void createWindow();
     }
   });
 });
