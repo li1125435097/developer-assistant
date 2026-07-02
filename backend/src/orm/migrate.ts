@@ -67,6 +67,7 @@ interface LegacyDbJson {
   config?: {
     clipboard_monitoring?: boolean;
     clipboard_max_length?: number;
+    close_to_tray_on_close?: boolean;
   };
   clipboard_records?: Array<{
     id: number;
@@ -197,6 +198,8 @@ async function importLegacyJsonIfNeeded(): Promise<void> {
         typeof config.clipboard_max_length === 'number' && config.clipboard_max_length > 0
           ? config.clipboard_max_length
           : 1000,
+      closeToTrayOnClose:
+        typeof config.close_to_tray_on_close === 'boolean' ? config.close_to_tray_on_close : true,
     })
     .onConflictDoNothing();
 
@@ -211,8 +214,21 @@ async function ensureDefaultConfig(): Promise<void> {
       id: 1,
       clipboardMonitoring: false,
       clipboardMaxLength: 1000,
+      closeToTrayOnClose: true,
     })
     .onConflictDoNothing();
+}
+
+async function ensureCloseToTrayColumn(): Promise<void> {
+  if (await hasMigration('0003_close_to_tray_on_close')) {
+    return;
+  }
+
+  await executeStatements([
+    `ALTER TABLE app_config
+      ADD COLUMN IF NOT EXISTS close_to_tray_on_close BOOLEAN NOT NULL DEFAULT TRUE`,
+  ]);
+  await markMigration('0003_close_to_tray_on_close');
 }
 
 export async function runMigrations(): Promise<void> {
@@ -232,5 +248,6 @@ export async function runMigrations(): Promise<void> {
   }
 
   await importLegacyJsonIfNeeded();
+  await ensureCloseToTrayColumn();
   await ensureDefaultConfig();
 }

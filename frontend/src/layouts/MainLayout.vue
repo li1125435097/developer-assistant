@@ -1,5 +1,7 @@
 <template>
-  <el-container class="layout-container">
+  <div class="app-shell">
+    <TitleBar v-if="isElectron" title="开发者脚本助手" />
+    <el-container class="layout-container">
     <el-aside :width="asideWidth" class="layout-aside">
       <div class="layout-logo" :class="{ 'is-collapse': isCollapse }">
         <el-icon :size="22" color="var(--el-color-primary)"><Monitor /></el-icon>
@@ -57,18 +59,21 @@
         <router-view />
       </el-main>
     </el-container>
-  </el-container>
+    </el-container>
+  </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import { Fold, Expand } from '@element-plus/icons-vue';
+import TitleBar from '@/components/TitleBar.vue';
 import { menuRoutes, THEME_OPTIONS } from '@/router';
 import { useTheme } from '@/composables/useTheme';
 
 const route = useRoute();
 const isCollapse = ref(false);
+const isElectron = Boolean(window.electronAPI?.isElectron);
 const { themeMode, applyTheme } = useTheme();
 
 const asideWidth = computed(() => (isCollapse.value ? '64px' : '220px'));

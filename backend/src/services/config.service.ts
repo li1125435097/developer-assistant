@@ -10,6 +10,7 @@ function mapConfig(row: typeof appConfig.$inferSelect): AppConfig {
   return {
     clipboard_monitoring: row.clipboardMonitoring,
     clipboard_max_length: row.clipboardMaxLength,
+    close_to_tray_on_close: row.closeToTrayOnClose,
   };
 }
 
@@ -30,6 +31,7 @@ async function loadConfigFromDb(): Promise<AppConfig> {
     return {
       clipboard_monitoring: false,
       clipboard_max_length: 1000,
+      close_to_tray_on_close: true,
     };
   }
   return mapConfig(row);
@@ -40,6 +42,7 @@ function validateUpdates(updates: Partial<AppConfig>): string[] {
   const current = cache ?? {
     clipboard_monitoring: false,
     clipboard_max_length: 1000,
+    close_to_tray_on_close: true,
   };
 
   if (updates.clipboard_monitoring !== undefined) {
@@ -52,6 +55,12 @@ function validateUpdates(updates: Partial<AppConfig>): string[] {
     const value = updates.clipboard_max_length;
     if (typeof value !== 'number' || !Number.isInteger(value) || value < 1) {
       errors.push('clipboard_max_length 必须为大于 0 的整数');
+    }
+  }
+
+  if (updates.close_to_tray_on_close !== undefined) {
+    if (typeof updates.close_to_tray_on_close !== 'boolean') {
+      errors.push('close_to_tray_on_close 必须为布尔值');
     }
   }
 
@@ -80,6 +89,7 @@ export async function setConfig(updates: Partial<AppConfig>): Promise<AppConfig>
     .set({
       clipboardMonitoring: next.clipboard_monitoring,
       clipboardMaxLength: next.clipboard_max_length,
+      closeToTrayOnClose: next.close_to_tray_on_close,
     })
     .where(eq(appConfig.id, 1))
     .returning();

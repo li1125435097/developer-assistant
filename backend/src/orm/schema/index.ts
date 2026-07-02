@@ -42,6 +42,7 @@ export const appConfig = pgTable('app_config', {
   id: integer('id').primaryKey().default(1),
   clipboardMonitoring: boolean('clipboard_monitoring').notNull().default(false),
   clipboardMaxLength: integer('clipboard_max_length').notNull().default(1000),
+  closeToTrayOnClose: boolean('close_to_tray_on_close').notNull().default(true),
 });
 
 export const clipboardRecords = pgTable('clipboard_records', {

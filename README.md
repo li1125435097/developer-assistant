@@ -86,6 +86,10 @@ npm start
 }
 ```
 
+## 下载
 
-如果只需要可运行目录、不要安装包，可以用：
-npm run build:dir --prefix electron
+可直接下载桌面版安装包（Windows）：
+
+| 版本 | 平台 | 下载 |
+|------|------|------|
+| 1.0.0 | Windows (x64) | [开发助手1.0.0.exe](release/开发助手1.0.0.exe) |

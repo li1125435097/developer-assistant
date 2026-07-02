@@ -22,6 +22,7 @@ export const PAGE_SIZE_OPTIONS = [10, 20, 50] as const;
 export const CONFIG_LABELS: Record<string, string> = {
   clipboard_monitoring: '剪贴板监控',
   clipboard_max_length: '剪贴板内容最大长度',
+  close_to_tray_on_close: '关闭时最小化到托盘',
 };
 
 export function formatPlatformLabel(platform?: string): string {

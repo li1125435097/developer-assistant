@@ -65,6 +65,7 @@ export interface ClipboardListResult {
 export interface AppConfig {
   clipboard_monitoring?: boolean;
   clipboard_max_length?: number;
+  close_to_tray_on_close?: boolean;
   [key: string]: boolean | number | string | undefined;
 }
 

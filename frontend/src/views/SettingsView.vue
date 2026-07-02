@@ -76,6 +76,9 @@ async function updateField(
   try {
     const data = await updateSettings({ [key]: value });
     config.value = { ...data };
+    if (key === 'close_to_tray_on_close') {
+      window.electronAPI?.markCloseBehaviorRemembered();
+    }
     showMessage('已保存');
   } catch (error) {
     revert?.();

@@ -36,6 +36,8 @@
     },
     "files": [
       "dist/**/*",
+      "build/icon.ico",
+      "build/icon.png",
       "config.json",
       "config.example.json",
       "package.json",
