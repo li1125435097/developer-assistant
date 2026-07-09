@@ -56,19 +56,26 @@
           @change="(val: string) => handleInputChange(key, val)"
         />
       </el-form-item>
+      <el-form-item label="数据恢复">
+        <el-button type="warning" :loading="restoring" @click="handleRestore">
+          恢复
+        </el-button>
+      </el-form-item>
     </el-form>
   </el-card>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
-import { fetchSettings, updateSettings, fetchDatabaseTables } from '@/api/settings';
+import { ElMessageBox } from 'element-plus';
+import { fetchSettings, updateSettings, fetchDatabaseTables, restoreFromBackup } from '@/api/settings';
 import { showMessage } from '@/utils/request';
 import { CONFIG_LABELS } from '@/utils';
 import type { AppConfig } from '@/types';
 
 const loading = ref(false);
 const saving = ref(false);
+const restoring = ref(false);
 const config = ref<AppConfig>({});
 const configKeys = ref<string[]>([]);
 const databaseTables = ref<string[]>([]);
@@ -199,6 +206,25 @@ function handleSelectAllTables(checked: boolean | string | number): void {
   const next = checked ? [...databaseTables.value] : [];
   backupTables.value = next;
   handleBackupTablesChange(next);
+}
+
+async function handleRestore(): Promise<void> {
+  if (restoring.value) return;
+  try {
+    await ElMessageBox.confirm('确认要从备份中恢复数据吗？', '确认恢复', {
+      type: 'warning',
+    });
+    restoring.value = true;
+    await restoreFromBackup();
+    showMessage('数据已从最新备份恢复');
+    await loadSettings();
+  } catch (error) {
+    if (error !== 'cancel') {
+      showMessage(getErrorMessage(error, '恢复失败'), 'error');
+    }
+  } finally {
+    restoring.value = false;
+  }
 }
 
 onMounted(loadSettings);

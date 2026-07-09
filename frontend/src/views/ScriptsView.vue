@@ -77,7 +77,8 @@
     width="640px"
     destroy-on-close
   >
-    <el-form label-position="top">
+    <div class="script-dialog-body">
+      <el-form label-position="top">
       <el-form-item label="名称" required>
         <el-input v-model="scriptForm.name" placeholder="脚本名称" />
       </el-form-item>
@@ -121,6 +122,7 @@
         </el-space>
       </el-form-item>
     </el-form>
+    </div>
     <template #footer>
       <el-button @click="scriptDialogVisible = false">取消</el-button>
       <el-button type="primary" :loading="saving" @click="saveScript">保存</el-button>
@@ -442,5 +444,36 @@ onMounted(loadScripts);
 <style scoped lang="scss">
 .action-list {
   width: 100%;
+}
+
+.script-dialog-body {
+  max-height: min(60vh, calc(100vh - 240px));
+  overflow-x: hidden;
+  padding: 20px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--el-border-color-darker) transparent;
+
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    margin: 4px 0;
+    background: transparent;
+    border-radius: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-color: var(--el-border-color-darker);
+    border: 2px solid transparent;
+    border-radius: 4px;
+    background-clip: padding-box;
+    transition: background-color 0.2s ease;
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background-color: var(--el-text-color-placeholder);
+  }
 }
 </style>

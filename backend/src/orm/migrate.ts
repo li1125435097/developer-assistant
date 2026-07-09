@@ -18,6 +18,7 @@ const ALL_MIGRATION_NAMES = [
   '0002_legacy_json_import',
   '0003_close_to_tray_on_close',
   '0004_backup_tables',
+  '0005_notebook_tables',
 ] as const;
 
 const INITIAL_MIGRATION_STATEMENTS = [
@@ -258,6 +259,34 @@ async function ensureBackupTablesColumn(): Promise<void> {
   await markMigration('0004_backup_tables');
 }
 
+async function ensureNotebookTables(): Promise<void> {
+  if (await hasMigration('0005_notebook_tables')) {
+    return;
+  }
+
+  await executeStatements([
+    `CREATE TABLE IF NOT EXISTS notebook_notes (
+      id SERIAL PRIMARY KEY,
+      content TEXT NOT NULL DEFAULT '',
+      pinned BOOLEAN NOT NULL DEFAULT FALSE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )`,
+    `CREATE TABLE IF NOT EXISTS notebook_tags (
+      id SERIAL PRIMARY KEY,
+      name TEXT NOT NULL UNIQUE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )`,
+    `CREATE TABLE IF NOT EXISTS notebook_note_tags (
+      note_id INTEGER NOT NULL,
+      tag_id INTEGER NOT NULL,
+      PRIMARY KEY (note_id, tag_id)
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_notebook_notes_pinned_updated ON notebook_notes (pinned DESC, updated_at DESC)`,
+  ]);
+  await markMigration('0005_notebook_tables');
+}
+
 async function ensureMigrationsTable(): Promise<void> {
   const database = getDb();
   await database.execute(sql.raw(`
@@ -328,6 +357,7 @@ async function runMigrationsInternal(): Promise<void> {
   await importLegacyJsonIfNeeded();
   await ensureCloseToTrayColumn();
   await ensureBackupTablesColumn();
+  await ensureNotebookTables();
   await ensureDefaultConfig();
 }
 

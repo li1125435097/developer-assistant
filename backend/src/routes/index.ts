@@ -3,6 +3,7 @@ import * as scriptController from '../controllers/script.controller.js';
 import * as historyController from '../controllers/history.controller.js';
 import * as clipboardController from '../controllers/clipboard.controller.js';
 import * as settingsController from '../controllers/settings.controller.js';
+import * as notebookController from '../controllers/notebook.controller.js';
 
 export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
   fastify.get('/api/scripts', scriptController.list);
@@ -25,7 +26,16 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
   fastify.delete('/api/clipboard/:id', clipboardController.remove);
   fastify.delete('/api/clipboard', clipboardController.clearAll);
 
+  fastify.get('/api/notebooks', notebookController.list);
+  fastify.post('/api/notebooks', notebookController.create);
+  fastify.get('/api/notebooks/tags', notebookController.listTags);
+  fastify.get('/api/notebooks/:id', notebookController.getById);
+  fastify.put('/api/notebooks/:id', notebookController.update);
+  fastify.delete('/api/notebooks/:id', notebookController.remove);
+  fastify.put('/api/notebooks/:id/pin', notebookController.togglePin);
+
   fastify.get('/api/settings/config', settingsController.getConfig);
   fastify.put('/api/settings/config', settingsController.updateConfig);
   fastify.get('/api/settings/tables', settingsController.listTables);
+  fastify.post('/api/settings/restore', settingsController.restoreBackup);
 }

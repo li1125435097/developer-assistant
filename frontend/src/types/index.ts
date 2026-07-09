@@ -62,6 +62,33 @@ export interface ClipboardListResult {
   totalPages: number;
 }
 
+export interface NotebookTag {
+  id: number;
+  name: string;
+}
+
+export interface NotebookNote {
+  id: number;
+  content: string;
+  pinned: boolean;
+  tags: NotebookTag[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface NotebookNotePayload {
+  content: string;
+  tags?: string[];
+}
+
+export interface NotebookListResult {
+  records: NotebookNote[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
 export interface AppConfig {
   clipboard_monitoring?: boolean;
   clipboard_max_length?: number;

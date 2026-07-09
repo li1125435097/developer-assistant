@@ -14,3 +14,9 @@ export function updateSettings(data: Partial<AppConfig>): Promise<AppConfig> {
 export function fetchDatabaseTables(): Promise<string[]> {
   return request.get<unknown, ApiResponse<string[]>>('/settings/tables').then((res) => res.data);
 }
+
+export function restoreFromBackup(): Promise<{ filePath: string }> {
+  return request
+    .post<unknown, ApiResponse<{ filePath: string }>>('/settings/restore')
+    .then((res) => res.data);
+}

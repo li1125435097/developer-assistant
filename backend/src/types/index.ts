@@ -44,6 +44,30 @@ export interface ClipboardRecord {
   created_at: string;
 }
 
+export interface NotebookTag {
+  id: number;
+  name: string;
+}
+
+export interface NotebookNote {
+  id: number;
+  content: string;
+  pinned: boolean;
+  tags: NotebookTag[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateNotebookInput {
+  content: string;
+  tags?: string[];
+}
+
+export interface UpdateNotebookInput {
+  content?: string;
+  tags?: string[];
+}
+
 export interface PaginatedResult<T> {
   records: T[];
   total: number;

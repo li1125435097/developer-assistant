@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router';
-import { Document, Clock, DocumentCopy, Setting } from '@element-plus/icons-vue';
+import { Document, Clock, DocumentCopy, Notebook, Setting } from '@element-plus/icons-vue';
 import type { Component } from 'vue';
 import MainLayout from '@/layouts/MainLayout.vue';
 
@@ -25,6 +25,12 @@ const routes: RouteRecordRaw[] = [
         name: 'clipboard',
         component: () => import('@/views/ClipboardView.vue'),
         meta: { title: '剪切板记录', subtitle: '查看与管理剪贴板历史' },
+      },
+      {
+        path: 'notebooks',
+        name: 'notebooks',
+        component: () => import('@/views/NotebooksView.vue'),
+        meta: { title: '记事本', subtitle: '记录与管理开发笔记' },
       },
       {
         path: 'settings',
@@ -54,6 +60,7 @@ export const menuRoutes: MenuRoute[] = [
   { name: 'scripts', path: '/', label: '脚本管理', icon: Document },
   { name: 'history', path: '/history', label: '执行历史', icon: Clock },
   { name: 'clipboard', path: '/clipboard', label: '剪切板记录', icon: DocumentCopy },
+  { name: 'notebooks', path: '/notebooks', label: '记事本', icon: Notebook },
   { name: 'settings', path: '/settings', label: '系统设置', icon: Setting },
 ];
 

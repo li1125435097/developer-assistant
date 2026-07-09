@@ -17,7 +17,7 @@ export const PLATFORM_OPTIONS: { value: Platform; label: string }[] = [
   { value: 'all', label: 'All' },
 ];
 
-export const PAGE_SIZE_OPTIONS = [10, 20, 50] as const;
+export const PAGE_SIZE_OPTIONS = [6,10, 20, 50] as const;
 
 export const CONFIG_LABELS: Record<string, string> = {
   clipboard_monitoring: '剪贴板监控',
@@ -63,6 +63,19 @@ export function formatVariables(variables?: Record<string, string>): string {
 export function truncateContent(content?: string, maxLen = 120): string {
   if (!content) return '—';
   const text = String(content);
+  if (text.length <= maxLen) return text;
+  return text.slice(0, maxLen) + '…';
+}
+
+export function stripHtml(html?: string): string {
+  if (!html) return '';
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  return (doc.body.textContent ?? '').replace(/\s+/g, ' ').trim();
+}
+
+export function truncateHtml(html?: string, maxLen = 120): string {
+  const text = stripHtml(html);
+  if (!text) return '—';
   if (text.length <= maxLen) return text;
   return text.slice(0, maxLen) + '…';
 }

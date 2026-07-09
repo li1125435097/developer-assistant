@@ -314,7 +314,7 @@ function parseSqlStatements(content: string): string[] {
   return statements;
 }
 
-export async function importSqlFile(filePath: string): Promise<void> {
+export async function importSqlFile(filePath: string, strict = false): Promise<void> {
   const content = fs.readFileSync(filePath, 'utf8');
   const statements = parseSqlStatements(content);
   const database = getDb();
@@ -323,7 +323,34 @@ export async function importSqlFile(filePath: string): Promise<void> {
     try {
       await database.execute(sql.raw(statement));
     } catch (error) {
+      if (strict) {
+        throw error;
+      }
       console.warn('导入 SQL 语句失败，已跳过:', statement.slice(0, 120), error);
     }
   }
+}
+
+const SYSTEM_TABLES = new Set(['schema_migrations']);
+
+async function clearAllTableData(): Promise<void> {
+  const tables = (await listDatabaseTables()).filter((name) => !SYSTEM_TABLES.has(name));
+  if (!tables.length) {
+    return;
+  }
+
+  const database = getDb();
+  const tableList = tables.join(', ');
+  await database.execute(sql.raw(`TRUNCATE TABLE ${tableList} RESTART IDENTITY CASCADE`));
+}
+
+export async function restoreFromBackup(): Promise<string> {
+  const latestBackup = getLatestBackupFile();
+  if (!latestBackup) {
+    throw new Error('未找到可用备份文件');
+  }
+
+  await clearAllTableData();
+  await importSqlFile(latestBackup, true);
+  return latestBackup;
 }

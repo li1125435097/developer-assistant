@@ -54,11 +54,45 @@ export const clipboardRecords = pgTable('clipboard_records', {
     .defaultNow(),
 });
 
+export const notebookNotes = pgTable('notebook_notes', {
+  id: serial('id').primaryKey(),
+  content: text('content').notNull().default(''),
+  pinned: boolean('pinned').notNull().default(false),
+  createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' })
+    .notNull()
+    .defaultNow(),
+});
+
+export const notebookTags = pgTable('notebook_tags', {
+  id: serial('id').primaryKey(),
+  name: text('name').notNull().unique(),
+  createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' })
+    .notNull()
+    .defaultNow(),
+});
+
+export const notebookNoteTags = pgTable(
+  'notebook_note_tags',
+  {
+    noteId: integer('note_id').notNull(),
+    tagId: integer('tag_id').notNull(),
+  },
+  (table) => ({
+    pk: { columns: [table.noteId, table.tagId] },
+  }),
+);
+
 export const schema = {
   scripts,
   executions,
   appConfig,
   clipboardRecords,
+  notebookNotes,
+  notebookTags,
+  notebookNoteTags,
 };
 
 export type Schema = typeof schema;

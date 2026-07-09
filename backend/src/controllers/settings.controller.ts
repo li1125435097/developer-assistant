@@ -5,6 +5,10 @@ import { syncClipboardWatcher } from '../hooks/clipboard-watcher.js';
 import type { AppConfig } from '../types/index.js';
 import { HttpError } from '../types/index.js';
 
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : '恢复失败';
+}
+
 export async function getConfig(_request: FastifyRequest, reply: FastifyReply) {
   return reply.send({ data: configService.getConfig() });
 }
@@ -39,5 +43,19 @@ export async function updateConfig(
       return reply.code(err.statusCode).send({ error: err.message });
     }
     throw err;
+  }
+}
+
+export async function restoreBackup(_request: FastifyRequest, reply: FastifyReply) {
+  try {
+    const filePath = await backupService.restoreFromBackup();
+    await configService.initConfigCache();
+    await syncClipboardWatcher();
+    return reply.send({ data: { filePath } });
+  } catch (err) {
+    if (err instanceof HttpError) {
+      return reply.code(err.statusCode).send({ error: err.message });
+    }
+    return reply.code(400).send({ error: getErrorMessage(err) });
   }
 }
