@@ -231,6 +231,18 @@ async function ensureCloseToTrayColumn(): Promise<void> {
   await markMigration('0003_close_to_tray_on_close');
 }
 
+async function ensureBackupTablesColumn(): Promise<void> {
+  if (await hasMigration('0004_backup_tables')) {
+    return;
+  }
+
+  await executeStatements([
+    `ALTER TABLE app_config
+      ADD COLUMN IF NOT EXISTS backup_tables JSONB NOT NULL DEFAULT '[]'::jsonb`,
+  ]);
+  await markMigration('0004_backup_tables');
+}
+
 export async function runMigrations(): Promise<void> {
   await initDatabase();
 
@@ -249,5 +261,6 @@ export async function runMigrations(): Promise<void> {
 
   await importLegacyJsonIfNeeded();
   await ensureCloseToTrayColumn();
+  await ensureBackupTablesColumn();
   await ensureDefaultConfig();
 }

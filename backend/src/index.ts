@@ -2,12 +2,14 @@ import 'dotenv/config';
 import { env } from './config/env.js';
 import { buildApp } from './app.js';
 import { closeDatabase } from './orm/client.js';
+import { stopBackupScheduler } from './services/backup.service.js';
 
 async function start(): Promise<void> {
   const fastify = await buildApp();
 
   const shutdown = async (signal: string) => {
     fastify.log.info(`收到 ${signal}，正在关闭服务...`);
+    stopBackupScheduler();
     await fastify.close();
     await closeDatabase();
     process.exit(0);

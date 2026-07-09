@@ -35,6 +35,7 @@ export interface AppConfig {
   clipboard_monitoring: boolean;
   clipboard_max_length: number;
   close_to_tray_on_close: boolean;
+  backup_tables: string[];
 }
 
 export interface ClipboardRecord {

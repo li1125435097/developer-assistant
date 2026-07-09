@@ -27,4 +27,5 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
 
   fastify.get('/api/settings/config', settingsController.getConfig);
   fastify.put('/api/settings/config', settingsController.updateConfig);
+  fastify.get('/api/settings/tables', settingsController.listTables);
 }

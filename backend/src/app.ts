@@ -6,6 +6,7 @@ import { registerHooks } from './hooks/index.js';
 import { syncClipboardWatcher } from './hooks/clipboard-watcher.js';
 import { runMigrations } from './orm/migrate.js';
 import { initConfigCache } from './services/config.service.js';
+import { startBackupScheduler } from './services/backup.service.js';
 import { registerRoutes } from './routes/index.js';
 
 export async function buildApp() {
@@ -24,6 +25,7 @@ export async function buildApp() {
 
   await registerRoutes(fastify);
   await syncClipboardWatcher();
+  startBackupScheduler();
 
   fastify.setNotFoundHandler((request, reply) => {
     if (request.method === 'GET' && !request.url.startsWith('/api/')) {

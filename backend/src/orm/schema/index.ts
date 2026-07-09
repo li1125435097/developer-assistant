@@ -43,6 +43,7 @@ export const appConfig = pgTable('app_config', {
   clipboardMonitoring: boolean('clipboard_monitoring').notNull().default(false),
   clipboardMaxLength: integer('clipboard_max_length').notNull().default(1000),
   closeToTrayOnClose: boolean('close_to_tray_on_close').notNull().default(true),
+  backupTables: jsonb('backup_tables').$type<string[]>().notNull().default([]),
 });
 
 export const clipboardRecords = pgTable('clipboard_records', {

@@ -11,6 +11,7 @@ function mapConfig(row: typeof appConfig.$inferSelect): AppConfig {
     clipboard_monitoring: row.clipboardMonitoring,
     clipboard_max_length: row.clipboardMaxLength,
     close_to_tray_on_close: row.closeToTrayOnClose,
+    backup_tables: Array.isArray(row.backupTables) ? row.backupTables : [],
   };
 }
 
@@ -32,6 +33,7 @@ async function loadConfigFromDb(): Promise<AppConfig> {
       clipboard_monitoring: false,
       clipboard_max_length: 1000,
       close_to_tray_on_close: true,
+      backup_tables: [],
     };
   }
   return mapConfig(row);
@@ -43,6 +45,7 @@ function validateUpdates(updates: Partial<AppConfig>): string[] {
     clipboard_monitoring: false,
     clipboard_max_length: 1000,
     close_to_tray_on_close: true,
+    backup_tables: [],
   };
 
   if (updates.clipboard_monitoring !== undefined) {
@@ -61,6 +64,14 @@ function validateUpdates(updates: Partial<AppConfig>): string[] {
   if (updates.close_to_tray_on_close !== undefined) {
     if (typeof updates.close_to_tray_on_close !== 'boolean') {
       errors.push('close_to_tray_on_close 必须为布尔值');
+    }
+  }
+
+  if (updates.backup_tables !== undefined) {
+    if (!Array.isArray(updates.backup_tables)) {
+      errors.push('backup_tables 必须为数组');
+    } else if (!updates.backup_tables.every((item) => typeof item === 'string' && /^[a-z_][a-z0-9_]*$/i.test(item))) {
+      errors.push('backup_tables 包含无效的表名');
     }
   }
 
@@ -90,6 +101,7 @@ export async function setConfig(updates: Partial<AppConfig>): Promise<AppConfig>
       clipboardMonitoring: next.clipboard_monitoring,
       clipboardMaxLength: next.clipboard_max_length,
       closeToTrayOnClose: next.close_to_tray_on_close,
+      backupTables: next.backup_tables,
     })
     .where(eq(appConfig.id, 1))
     .returning();

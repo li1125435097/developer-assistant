@@ -10,3 +10,7 @@ export function fetchSettings(): Promise<AppConfig> {
 export function updateSettings(data: Partial<AppConfig>): Promise<AppConfig> {
   return request.put<unknown, ApiResponse<AppConfig>>(BASE, data).then((res) => res.data);
 }
+
+export function fetchDatabaseTables(): Promise<string[]> {
+  return request.get<unknown, ApiResponse<string[]>>('/settings/tables').then((res) => res.data);
+}

@@ -1,11 +1,17 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import * as configService from '../services/config.service.js';
+import * as backupService from '../services/backup.service.js';
 import { syncClipboardWatcher } from '../hooks/clipboard-watcher.js';
 import type { AppConfig } from '../types/index.js';
 import { HttpError } from '../types/index.js';
 
 export async function getConfig(_request: FastifyRequest, reply: FastifyReply) {
   return reply.send({ data: configService.getConfig() });
+}
+
+export async function listTables(_request: FastifyRequest, reply: FastifyReply) {
+  const tables = await backupService.listDatabaseTables();
+  return reply.send({ data: tables });
 }
 
 export async function updateConfig(
@@ -21,6 +27,11 @@ export async function updateConfig(
     const config = await configService.setConfig(body);
     if (body.clipboard_monitoring !== undefined) {
       await syncClipboardWatcher();
+    }
+    if (body.backup_tables !== undefined) {
+      void backupService.runScheduledBackup().catch((error) => {
+        request.log.error(error, '保存备份配置后执行备份失败');
+      });
     }
     return reply.send({ data: config });
   } catch (err) {

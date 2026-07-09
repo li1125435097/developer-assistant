@@ -66,7 +66,8 @@ export interface AppConfig {
   clipboard_monitoring?: boolean;
   clipboard_max_length?: number;
   close_to_tray_on_close?: boolean;
-  [key: string]: boolean | number | string | undefined;
+  backup_tables?: string[];
+  [key: string]: boolean | number | string | string[] | undefined;
 }
 
 export interface ApiResponse<T> {

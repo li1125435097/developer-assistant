@@ -22,6 +22,34 @@
           :step="1"
           @change="(val: number) => handleInputChange(key, val)"
         />
+        <el-select
+          v-else-if="key === 'backup_tables'"
+          v-model="backupTables"
+          multiple
+          filterable
+          collapse-tags
+          collapse-tags-tooltip
+          :max-collapse-tags="3"
+          placeholder="选择要定时备份的数据库表"
+          class="backup-tables-select"
+          @change="handleBackupTablesChange"
+        >
+          <template #header>
+            <el-checkbox
+              :model-value="isAllTablesSelected"
+              :indeterminate="isTablesIndeterminate"
+              @change="handleSelectAllTables"
+            >
+              全选
+            </el-checkbox>
+          </template>
+          <el-option
+            v-for="table in databaseTables"
+            :key="table"
+            :label="table"
+            :value="table"
+          />
+        </el-select>
         <el-input
           v-else
           v-model="config[key]"
@@ -33,8 +61,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
-import { fetchSettings, updateSettings } from '@/api/settings';
+import { ref, computed, onMounted } from 'vue';
+import { fetchSettings, updateSettings, fetchDatabaseTables } from '@/api/settings';
 import { showMessage } from '@/utils/request';
 import { CONFIG_LABELS } from '@/utils';
 import type { AppConfig } from '@/types';
@@ -43,16 +71,55 @@ const loading = ref(false);
 const saving = ref(false);
 const config = ref<AppConfig>({});
 const configKeys = ref<string[]>([]);
+const databaseTables = ref<string[]>([]);
+const savedBackupTables = ref<string[]>([]);
+
+const backupTables = computed({
+  get: () => {
+    const value = config.value.backup_tables;
+    return Array.isArray(value) ? value : [];
+  },
+  set: (value: string[]) => {
+    config.value.backup_tables = value;
+  },
+});
+
+const isAllTablesSelected = computed(() => {
+  if (!databaseTables.value.length) return false;
+  return backupTables.value.length === databaseTables.value.length;
+});
+
+const isTablesIndeterminate = computed(() => {
+  const selectedCount = backupTables.value.length;
+  return selectedCount > 0 && selectedCount < databaseTables.value.length;
+});
 
 function getErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
 }
 
+function normalizeConfig(data: AppConfig): AppConfig {
+  return {
+    ...data,
+    backup_tables: Array.isArray(data.backup_tables) ? data.backup_tables : [],
+  };
+}
+
+async function loadDatabaseTables(): Promise<void> {
+  try {
+    databaseTables.value = await fetchDatabaseTables();
+  } catch {
+    databaseTables.value = [];
+    showMessage('加载数据库表列表失败', 'error');
+  }
+}
+
 async function loadSettings(): Promise<void> {
   loading.value = true;
   try {
-    const data = await fetchSettings();
-    config.value = { ...data };
+    const [data] = await Promise.all([fetchSettings(), loadDatabaseTables()]);
+    config.value = normalizeConfig(data);
+    savedBackupTables.value = [...(config.value.backup_tables ?? [])];
     configKeys.value = Object.keys(data);
   } catch {
     configKeys.value = [];
@@ -68,14 +135,17 @@ function getLabel(key: string): string {
 
 async function updateField(
   key: string,
-  value: boolean | number | string,
+  value: boolean | number | string | string[],
   revert?: () => void,
 ): Promise<void> {
   if (saving.value) return;
   saving.value = true;
   try {
     const data = await updateSettings({ [key]: value });
-    config.value = { ...data };
+    config.value = normalizeConfig(data);
+    if (key === 'backup_tables' && Array.isArray(value)) {
+      savedBackupTables.value = [...value];
+    }
     if (key === 'close_to_tray_on_close') {
       window.electronAPI?.markCloseBehaviorRemembered();
     }
@@ -118,9 +188,24 @@ function handleInputChange(key: string, val: number | string): void {
   });
 }
 
+function handleBackupTablesChange(value: string[]): void {
+  const previous = [...savedBackupTables.value];
+  updateField('backup_tables', value, () => {
+    config.value.backup_tables = previous;
+  });
+}
+
+function handleSelectAllTables(checked: boolean | string | number): void {
+  const next = checked ? [...databaseTables.value] : [];
+  backupTables.value = next;
+  handleBackupTablesChange(next);
+}
+
 onMounted(loadSettings);
 </script>
 
 <style scoped lang="scss">
-// styles in global index.scss
+.backup-tables-select {
+  width: 100%;
+}
 </style>
