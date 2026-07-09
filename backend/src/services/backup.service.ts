@@ -204,7 +204,7 @@ export async function listDatabaseTables(): Promise<string[]> {
       AND tablename NOT LIKE 'sql_%'
     ORDER BY tablename
   `);
-  return getExecuteRows<{ tablename: string }>(result).map((row) => row.tablename);
+  return getExecuteRows<{ tablename: string }>(result).map((row) => row.tablename).filter((name) => name !== 'schema_migrations');
 }
 
 export async function backupTables(tableNames: string[]): Promise<string | null> {
