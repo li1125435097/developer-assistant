@@ -273,3 +273,57 @@ export function stopBackupScheduler(): void {
   clearInterval(backupTimer);
   backupTimer = null;
 }
+
+export function getLatestBackupFile(): string | null {
+  if (!fs.existsSync(env.backupDir)) {
+    return null;
+  }
+
+  const backupFiles = fs.readdirSync(env.backupDir)
+    .filter((name) => name.startsWith('backup-') && name.endsWith('.sql'))
+    .map((name) => {
+      const filePath = path.join(env.backupDir, name);
+      return { filePath, mtime: fs.statSync(filePath).mtimeMs };
+    })
+    .sort((a, b) => b.mtime - a.mtime);
+
+  return backupFiles[0]?.filePath ?? null;
+}
+
+function parseSqlStatements(content: string): string[] {
+  const statements: string[] = [];
+  let current = '';
+
+  for (const line of content.split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('--')) {
+      continue;
+    }
+
+    current += `${line}\n`;
+    if (trimmed.endsWith(';')) {
+      statements.push(current.trim());
+      current = '';
+    }
+  }
+
+  if (current.trim()) {
+    statements.push(current.trim());
+  }
+
+  return statements;
+}
+
+export async function importSqlFile(filePath: string): Promise<void> {
+  const content = fs.readFileSync(filePath, 'utf8');
+  const statements = parseSqlStatements(content);
+  const database = getDb();
+
+  for (const statement of statements) {
+    try {
+      await database.execute(sql.raw(statement));
+    } catch (error) {
+      console.warn('导入 SQL 语句失败，已跳过:', statement.slice(0, 120), error);
+    }
+  }
+}

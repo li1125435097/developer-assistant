@@ -1,9 +1,24 @@
 import fs from 'node:fs';
 import { sql } from 'drizzle-orm';
-import { getDb, getLegacyJsonPath, initDatabase } from './client.js';
+import { env } from '../config/env.js';
+import {
+  closeDatabase,
+  deletePgliteDataDir,
+  getDb,
+  getLegacyJsonPath,
+  initDatabase,
+} from './client.js';
 import { appConfig, clipboardRecords, executions, scripts } from './schema/index.js';
+import { getLatestBackupFile, importSqlFile } from '../services/backup.service.js';
 
 const MIGRATIONS_TABLE = 'schema_migrations';
+
+const ALL_MIGRATION_NAMES = [
+  '0001_initial',
+  '0002_legacy_json_import',
+  '0003_close_to_tray_on_close',
+  '0004_backup_tables',
+] as const;
 
 const INITIAL_MIGRATION_STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS scripts (
@@ -243,9 +258,7 @@ async function ensureBackupTablesColumn(): Promise<void> {
   await markMigration('0004_backup_tables');
 }
 
-export async function runMigrations(): Promise<void> {
-  await initDatabase();
-
+async function ensureMigrationsTable(): Promise<void> {
   const database = getDb();
   await database.execute(sql.raw(`
     CREATE TABLE IF NOT EXISTS ${MIGRATIONS_TABLE} (
@@ -254,6 +267,59 @@ export async function runMigrations(): Promise<void> {
       applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `));
+}
+
+async function markAllMigrationsApplied(): Promise<void> {
+  for (const name of ALL_MIGRATION_NAMES) {
+    await markMigration(name);
+  }
+}
+
+function isDatabaseCorruptionError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') {
+    return false;
+  }
+
+  const err = error as Error & { cause?: unknown };
+  const messages = [
+    err.message ?? '',
+    err.cause instanceof Error ? err.cause.message : String(err.cause ?? ''),
+  ];
+
+  return messages.some(
+    (message) =>
+      message.includes('Aborted') ||
+      message.includes('RuntimeError') ||
+      message.includes('database disk image is malformed'),
+  );
+}
+
+async function recoverCorruptedDatabase(): Promise<void> {
+  console.warn('检测到 PGlite 数据库损坏，正在删除数据目录并重建...');
+
+  await closeDatabase();
+  deletePgliteDataDir();
+  await initDatabase();
+
+  const latestBackup = getLatestBackupFile();
+  if (latestBackup) {
+    console.info(`正在从最新备份恢复: ${latestBackup}`);
+    await importSqlFile(latestBackup);
+    await ensureMigrationsTable();
+    await markAllMigrationsApplied();
+    await ensureDefaultConfig();
+    console.info('数据库已从备份恢复完成');
+    return;
+  }
+
+  console.warn('未找到可用备份，将使用空数据库重新初始化');
+  await runMigrationsInternal();
+}
+
+async function runMigrationsInternal(): Promise<void> {
+  await initDatabase();
+
+  await ensureMigrationsTable();
 
   if (!(await hasMigration('0001_initial'))) {
     await runInitialMigration();
@@ -263,4 +329,20 @@ export async function runMigrations(): Promise<void> {
   await ensureCloseToTrayColumn();
   await ensureBackupTablesColumn();
   await ensureDefaultConfig();
+}
+
+export async function runMigrations(): Promise<void> {
+  if (env.database.mode !== 'pglite') {
+    await runMigrationsInternal();
+    return;
+  }
+
+  try {
+    await runMigrationsInternal();
+  } catch (error) {
+    if (!isDatabaseCorruptionError(error)) {
+      throw error;
+    }
+    await recoverCorruptedDatabase();
+  }
 }

@@ -45,7 +45,9 @@ function startServer(): void {
 
   if (app.isPackaged) {
     const dataDir = getAppDataDir();
+    serverEnv.DATA_DIR = dataDir;
     serverEnv.DATABASE_DIR = path.join(dataDir, 'pglite');
+    serverEnv.BACKUP_DIR = path.join(dataDir, 'db-bak');
     serverEnv.LEGACY_DATABASE_PATH = path.join(dataDir, 'db.json');
   }
 

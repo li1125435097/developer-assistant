@@ -63,3 +63,12 @@ export function getPgliteDir() {
 export function getLegacyJsonPath() {
   return env.database.legacyJsonPath;
 }
+
+export function deletePgliteDataDir(): void {
+  if (env.database.mode !== 'pglite') {
+    return;
+  }
+  if (fs.existsSync(env.database.pgliteDir)) {
+    fs.rmSync(env.database.pgliteDir, { recursive: true, force: true });
+  }
+}

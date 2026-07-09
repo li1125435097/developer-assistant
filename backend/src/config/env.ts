@@ -32,8 +32,8 @@ export const env = {
       path.join(projectRoot, 'data', 'db.json'),
   },
   frontendDist: path.join(projectRoot, 'frontend', 'dist'),
-  dataDir: path.join(projectRoot, 'data'),
-  backupDir: path.join(projectRoot, 'data', 'db-bak'),
+  dataDir: process.env.DATA_DIR || path.join(projectRoot, 'data'),
+  backupDir: process.env.BACKUP_DIR || path.join(projectRoot, 'data', 'db-bak'),
 } as const;
 
 export function assertDatabaseConfig(): void {
