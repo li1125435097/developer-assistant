@@ -36,8 +36,7 @@
     },
     "files": [
       "dist/**/*",
-      "build/icon.ico",
-      "build/icon.png",
+      "build/icons/**/*",
       "config.json",
       "config.example.json",
       "package.json",
@@ -53,21 +52,21 @@
       }
     ],
     "win": {
-      "icon": "build/icon.ico",
+      "icon": "build/icons/icon.ico",
       "target": [
         "nsis"
       ],
       "signAndEditExecutable": false
     },
     "mac": {
-      "icon": "build/icon.png",
+      "icon": "build/icons/icon.icns",
       "target": [
         "dmg"
       ],
       "category": "public.app-category.developer-tools"
     },
     "linux": {
-      "icon": "build/icon.png",
+      "icon": "build/icons",
       "target": [
         "AppImage",
         "deb"

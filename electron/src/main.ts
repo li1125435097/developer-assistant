@@ -282,12 +282,24 @@ function markCloseBehaviorRemembered(): void {
   fs.writeFileSync(getCloseBehaviorFlagPath(), '1', 'utf8');
 }
 
-function getTrayIcon(): Electron.NativeImage {
-  const iconName = process.platform === 'win32' ? 'icon.ico' : 'icon.png';
+function getAppIconFileName(): string {
+  if (process.platform === 'win32') {
+    return 'icon.ico';
+  }
+
+  if (process.platform === 'darwin') {
+    return '32x32.png';
+  }
+
+  return '64x64.png';
+}
+
+function getAppIcon(): Electron.NativeImage {
+  const iconName = getAppIconFileName();
   const candidates = [
-    path.join(__dirname, '..', 'build', iconName),
-    path.join(process.resourcesPath, 'build', iconName),
-    path.join(app.getAppPath(), 'build', iconName),
+    path.join(__dirname, '..', 'build', 'icons', iconName),
+    path.join(process.resourcesPath, 'build', 'icons', iconName),
+    path.join(app.getAppPath(), 'build', 'icons', iconName),
   ];
 
   for (const iconPath of candidates) {
@@ -297,6 +309,10 @@ function getTrayIcon(): Electron.NativeImage {
   }
 
   return nativeImage.createEmpty();
+}
+
+function getTrayIcon(): Electron.NativeImage {
+  return getAppIcon();
 }
 
 function showMainWindow(): void {
@@ -449,12 +465,15 @@ async function createWindow(): Promise<void> {
   await syncOpenAtStartupFromConfig();
   await syncShowWindowHotkeyFromConfig();
 
+  const appIcon = getAppIcon();
+
   const win = new BrowserWindow({
     width: windowConfig.width,
     height: windowConfig.height,
     minWidth: windowConfig.minWidth,
     minHeight: windowConfig.minHeight,
     title: windowConfig.title,
+    icon: appIcon.isEmpty() ? undefined : appIcon,
     frame: false,
     transparent: true,
     backgroundColor: '#00000000',
