@@ -38,7 +38,13 @@
       </div>
     </template>
 
-    <el-table v-loading="loading" :data="records" stripe border>
+    <el-table
+      v-loading="loading"
+      :data="records"
+      stripe
+      border
+      :row-class-name="getRowClassName"
+    >
       <template #empty>
         <el-empty description="暂无记事本">
           <el-button type="primary" :icon="Plus" @click="openCreateDialog">新建第一条记事</el-button>
@@ -48,9 +54,6 @@
       <el-table-column label="内容" min-width="280">
         <template #default="{ row }">
           <div class="note-content-cell">
-            <el-icon v-if="row.pinned" class="note-pin-icon" color="var(--el-color-warning)">
-              <Top />
-            </el-icon>
             <div class="note-content-preview" v-html="row.content || '—'" />
           </div>
         </template>
@@ -79,7 +82,7 @@
             <el-button size="small" :icon="Edit" @click="openEditDialog(row.id)" />
             <el-button
               size="small"
-              :type="row.pinned ? 'warning' : 'default'"
+              :type="row.pinned ? 'success' : 'default'"
               :icon="Top"
               @click="handleTogglePin(row)"
             />
@@ -235,6 +238,10 @@ function handleSizeChange(): void {
   loadNotes();
 }
 
+function getRowClassName({ row }: { row: NotebookNote }): string {
+  return row.pinned ? 'note-row-pinned' : '';
+}
+
 function resetForm(): void {
   editingId.value = null;
   dialogTitle.value = '新建记事本';
@@ -353,11 +360,20 @@ onMounted(async () => {
   display: flex;
   align-items: flex-start;
   gap: 6px;
+  min-height: 24px;
 }
 
-.note-pin-icon {
-  flex-shrink: 0;
-  margin-top: 2px;
+// 置顶颜色设置
+// :deep(.note-row-pinned > td.el-table__cell) {
+//   background-color: rgba(240, 249, 235, 0.5) !important;
+// }
+
+// :deep(.note-row-pinned:hover > td.el-table__cell) {
+//   background-color: rgba(240, 249, 235) !important;
+// }
+
+:deep(.note-row-pinned > td.el-table__cell:first-child) {
+  box-shadow: inset 3px 0 0 var(--el-color-success);
 }
 
 .note-content-preview {

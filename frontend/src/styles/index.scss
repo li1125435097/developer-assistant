@@ -136,6 +136,10 @@ body,
   flex: 1;
   border-right: none;
   overflow-y: auto;
+
+  .el-menu-item {
+    user-select: none;
+  }
 }
 
 .layout-footer {
