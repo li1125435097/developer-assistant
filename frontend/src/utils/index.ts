@@ -23,7 +23,9 @@ export const CONFIG_LABELS: Record<string, string> = {
   clipboard_monitoring: '剪贴板监控',
   clipboard_max_length: '剪贴板内容最大长度',
   close_to_tray_on_close: '关闭时最小化到托盘',
+  open_at_startup: '开机启动',
   backup_tables: '数据备份表',
+  show_window_hotkey: '显示/隐藏窗口快捷键',
 };
 
 export function formatPlatformLabel(platform?: string): string {

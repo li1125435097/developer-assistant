@@ -1,5 +1,7 @@
 import 'dotenv/config';
+import './config/init-logging.js';
 import { env } from './config/env.js';
+import { getServerLogPath } from './config/logger.js';
 import { buildApp } from './app.js';
 import { closeDatabase } from './orm/client.js';
 import { stopBackupScheduler } from './services/backup.service.js';
@@ -20,6 +22,7 @@ async function start(): Promise<void> {
 
   await fastify.listen({ port: env.port, host: '0.0.0.0' });
   fastify.log.info(`服务已启动: http://localhost:${env.port}`);
+  fastify.log.info(`运行日志: ${getServerLogPath()}`);
 }
 
 start().catch((err) => {

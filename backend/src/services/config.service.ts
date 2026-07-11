@@ -11,7 +11,9 @@ function mapConfig(row: typeof appConfig.$inferSelect): AppConfig {
     clipboard_monitoring: row.clipboardMonitoring,
     clipboard_max_length: row.clipboardMaxLength,
     close_to_tray_on_close: row.closeToTrayOnClose,
+    open_at_startup: row.openAtStartup,
     backup_tables: Array.isArray(row.backupTables) ? row.backupTables : [],
+    show_window_hotkey: row.showWindowHotkey,
   };
 }
 
@@ -33,7 +35,9 @@ async function loadConfigFromDb(): Promise<AppConfig> {
       clipboard_monitoring: false,
       clipboard_max_length: 1000,
       close_to_tray_on_close: true,
+      open_at_startup: true,
       backup_tables: [],
+      show_window_hotkey: '',
     };
   }
   return mapConfig(row);
@@ -45,7 +49,9 @@ function validateUpdates(updates: Partial<AppConfig>): string[] {
     clipboard_monitoring: false,
     clipboard_max_length: 1000,
     close_to_tray_on_close: true,
+    open_at_startup: true,
     backup_tables: [],
+    show_window_hotkey: '',
   };
 
   if (updates.clipboard_monitoring !== undefined) {
@@ -67,11 +73,28 @@ function validateUpdates(updates: Partial<AppConfig>): string[] {
     }
   }
 
+  if (updates.open_at_startup !== undefined) {
+    if (typeof updates.open_at_startup !== 'boolean') {
+      errors.push('open_at_startup 必须为布尔值');
+    }
+  }
+
   if (updates.backup_tables !== undefined) {
     if (!Array.isArray(updates.backup_tables)) {
       errors.push('backup_tables 必须为数组');
     } else if (!updates.backup_tables.every((item) => typeof item === 'string' && /^[a-z_][a-z0-9_]*$/i.test(item))) {
       errors.push('backup_tables 包含无效的表名');
+    }
+  }
+
+  if (updates.show_window_hotkey !== undefined) {
+    const value = updates.show_window_hotkey;
+    if (typeof value !== 'string') {
+      errors.push('show_window_hotkey 必须为字符串');
+    } else if (value.length > 100) {
+      errors.push('show_window_hotkey 长度不能超过 100');
+    } else if (value && !/^[A-Za-z0-9+]+$/.test(value)) {
+      errors.push('show_window_hotkey 格式无效');
     }
   }
 
@@ -101,7 +124,9 @@ export async function setConfig(updates: Partial<AppConfig>): Promise<AppConfig>
       clipboardMonitoring: next.clipboard_monitoring,
       clipboardMaxLength: next.clipboard_max_length,
       closeToTrayOnClose: next.close_to_tray_on_close,
+      openAtStartup: next.open_at_startup,
       backupTables: next.backup_tables,
+      showWindowHotkey: next.show_window_hotkey,
     })
     .where(eq(appConfig.id, 1))
     .returning();

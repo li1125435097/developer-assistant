@@ -7,6 +7,8 @@ export interface ElectronAPI {
   isMaximized: () => Promise<boolean>;
   onMaximizeChange: (callback: (maximized: boolean) => void) => () => void;
   markCloseBehaviorRemembered: () => void;
+  setOpenAtStartup: (enabled: boolean) => void;
+  setShowWindowHotkey: (hotkey: string) => Promise<boolean>;
 }
 
 declare global {

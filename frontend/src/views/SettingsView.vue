@@ -50,6 +50,11 @@
             :value="table"
           />
         </el-select>
+        <HotkeyInput
+          v-else-if="key === 'show_window_hotkey'"
+          :model-value="config[key] as string"
+          @change="handleHotkeyChange"
+        />
         <el-input
           v-else
           v-model="config[key]"
@@ -71,6 +76,7 @@ import { ElMessageBox } from 'element-plus';
 import { fetchSettings, updateSettings, fetchDatabaseTables, restoreFromBackup } from '@/api/settings';
 import { showMessage } from '@/utils/request';
 import { CONFIG_LABELS } from '@/utils';
+import HotkeyInput from '@/components/HotkeyInput.vue';
 import type { AppConfig } from '@/types';
 
 const loading = ref(false);
@@ -109,6 +115,7 @@ function normalizeConfig(data: AppConfig): AppConfig {
   return {
     ...data,
     backup_tables: Array.isArray(data.backup_tables) ? data.backup_tables : [],
+    show_window_hotkey: typeof data.show_window_hotkey === 'string' ? data.show_window_hotkey : '',
   };
 }
 
@@ -127,7 +134,9 @@ async function loadSettings(): Promise<void> {
     const [data] = await Promise.all([fetchSettings(), loadDatabaseTables()]);
     config.value = normalizeConfig(data);
     savedBackupTables.value = [...(config.value.backup_tables ?? [])];
-    configKeys.value = Object.keys(data);
+    configKeys.value = Object.keys(data).filter(
+      (key) => key !== 'show_window_hotkey' || Boolean(window.electronAPI?.isElectron),
+    );
   } catch {
     configKeys.value = [];
     showMessage('加载配置失败', 'error');
@@ -155,6 +164,9 @@ async function updateField(
     }
     if (key === 'close_to_tray_on_close') {
       window.electronAPI?.markCloseBehaviorRemembered();
+    }
+    if (key === 'open_at_startup' && typeof value === 'boolean') {
+      window.electronAPI?.setOpenAtStartup(value);
     }
     showMessage('已保存');
   } catch (error) {
@@ -206,6 +218,43 @@ function handleSelectAllTables(checked: boolean | string | number): void {
   const next = checked ? [...databaseTables.value] : [];
   backupTables.value = next;
   handleBackupTablesChange(next);
+}
+
+async function handleHotkeyChange(value: string): Promise<void> {
+  const previous = config.value.show_window_hotkey ?? '';
+  if (value === previous) {
+    return;
+  }
+
+  if (saving.value) {
+    return;
+  }
+
+  config.value.show_window_hotkey = value;
+  saving.value = true;
+
+  try {
+    const data = await updateSettings({ show_window_hotkey: value });
+    config.value = normalizeConfig(data);
+
+    if (window.electronAPI) {
+      const registered = await window.electronAPI.setShowWindowHotkey(value);
+      if (!registered && value) {
+        config.value.show_window_hotkey = previous;
+        await updateSettings({ show_window_hotkey: previous });
+        await window.electronAPI.setShowWindowHotkey(previous);
+        showMessage('快捷键注册失败，可能已被其他程序占用', 'error');
+        return;
+      }
+    }
+
+    showMessage('已保存');
+  } catch (error) {
+    config.value.show_window_hotkey = previous;
+    showMessage(getErrorMessage(error, '保存失败'), 'error');
+  } finally {
+    saving.value = false;
+  }
 }
 
 async function handleRestore(): Promise<void> {

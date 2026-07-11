@@ -2,6 +2,7 @@ import path from 'node:path';
 import Fastify from 'fastify';
 import fastifyStatic from '@fastify/static';
 import { env, assertDatabaseConfig } from './config/env.js';
+import { createFastifyLoggerConfig } from './config/logger.js';
 import { registerHooks } from './hooks/index.js';
 import { syncClipboardWatcher } from './hooks/clipboard-watcher.js';
 import { runMigrations } from './orm/migrate.js';
@@ -12,7 +13,7 @@ import { registerRoutes } from './routes/index.js';
 export async function buildApp() {
   assertDatabaseConfig();
 
-  const fastify = Fastify({ logger: true });
+  const fastify = Fastify({ logger: createFastifyLoggerConfig() });
   registerHooks(fastify);
 
   await runMigrations();

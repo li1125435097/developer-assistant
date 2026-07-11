@@ -19,4 +19,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   markCloseBehaviorRemembered: () => {
     ipcRenderer.send('window:mark-close-behavior-remembered');
   },
+  setOpenAtStartup: (enabled: boolean) => {
+    ipcRenderer.send('app:set-open-at-startup', enabled);
+  },
+  setShowWindowHotkey: (hotkey: string) =>
+    ipcRenderer.invoke('app:set-show-window-hotkey', hotkey) as Promise<boolean>,
 });

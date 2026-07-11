@@ -2,6 +2,7 @@ import {
   app,
   BrowserWindow,
   dialog,
+  globalShortcut,
   ipcMain,
   Menu,
   nativeImage,
@@ -23,6 +24,16 @@ interface CloseBehaviorConfig {
   close_to_tray_on_close: boolean;
 }
 
+interface StartupConfig {
+  open_at_startup: boolean;
+}
+
+interface ShowWindowHotkeyConfig {
+  show_window_hotkey: string;
+}
+
+let registeredShowWindowHotkey: string | null = null;
+
 function getAppDataDir(): string {
   return path.join(app.getPath('userData'), 'data');
 }
@@ -41,6 +52,7 @@ function startServer(): void {
     ...process.env,
     ELECTRON_RUN_AS_NODE: '1',
     NODE_PATH: getServerNodeModulesPath(),
+    LOGS_DIR: path.join(app.getPath('userData'), 'logs'),
   };
 
   if (app.isPackaged) {
@@ -135,6 +147,86 @@ function loadConfig(): AppConfig {
   return config;
 }
 
+async function fetchStartupConfig(): Promise<StartupConfig> {
+  try {
+    const response = await fetch(`${appServerUrl}/api/settings/config`);
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const payload = (await response.json()) as { data?: StartupConfig };
+    return {
+      open_at_startup: payload.data?.open_at_startup ?? true,
+    };
+  } catch (error) {
+    console.warn('Failed to fetch startup config:', error);
+    return { open_at_startup: true };
+  }
+}
+
+function applyOpenAtStartup(enabled: boolean): void {
+  app.setLoginItemSettings({
+    openAtLogin: enabled,
+    path: process.execPath,
+    args: app.isPackaged ? [] : [path.resolve(process.argv[1])],
+  });
+}
+
+async function syncOpenAtStartupFromConfig(): Promise<void> {
+  const { open_at_startup: openAtStartup } = await fetchStartupConfig();
+  applyOpenAtStartup(openAtStartup);
+}
+
+async function fetchShowWindowHotkeyConfig(): Promise<ShowWindowHotkeyConfig> {
+  try {
+    const response = await fetch(`${appServerUrl}/api/settings/config`);
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const payload = (await response.json()) as { data?: ShowWindowHotkeyConfig };
+    return {
+      show_window_hotkey: payload.data?.show_window_hotkey ?? '',
+    };
+  } catch (error) {
+    console.warn('Failed to fetch show window hotkey config:', error);
+    return { show_window_hotkey: '' };
+  }
+}
+
+function unregisterShowWindowHotkey(): void {
+  if (registeredShowWindowHotkey) {
+    globalShortcut.unregister(registeredShowWindowHotkey);
+    registeredShowWindowHotkey = null;
+  }
+}
+
+function registerShowWindowHotkey(accelerator: string): boolean {
+  unregisterShowWindowHotkey();
+
+  const normalized = accelerator.trim();
+  if (!normalized) {
+    return true;
+  }
+
+  const success = globalShortcut.register(normalized, () => {
+    toggleMainWindowVisibility();
+  });
+
+  if (success) {
+    registeredShowWindowHotkey = normalized;
+  }
+
+  return success;
+}
+
+async function syncShowWindowHotkeyFromConfig(): Promise<void> {
+  const { show_window_hotkey: hotkey } = await fetchShowWindowHotkeyConfig();
+  if (!registerShowWindowHotkey(hotkey)) {
+    console.warn('Failed to register show window hotkey:', hotkey);
+  }
+}
+
 async function fetchCloseBehavior(): Promise<CloseBehaviorConfig> {
   try {
     const response = await fetch(`${appServerUrl}/api/settings/config`);
@@ -218,6 +310,31 @@ function showMainWindow(): void {
 
   mainWindow.show();
   mainWindow.focus();
+}
+
+function hideMainWindowToTray(): void {
+  mainWindow?.hide();
+}
+
+function isMainWindowShown(): boolean {
+  if (!mainWindow) {
+    return false;
+  }
+
+  return mainWindow.isVisible() && !mainWindow.isMinimized();
+}
+
+function toggleMainWindowVisibility(): void {
+  if (!mainWindow) {
+    return;
+  }
+
+  if (isMainWindowShown()) {
+    hideMainWindowToTray();
+    return;
+  }
+
+  showMainWindow();
 }
 
 function createTray(title: string): void {
@@ -309,6 +426,17 @@ function registerWindowIpc(): void {
   ipcMain.on('window:mark-close-behavior-remembered', () => {
     markCloseBehaviorRemembered();
   });
+
+  ipcMain.on('app:set-open-at-startup', (_event, enabled: boolean) => {
+    applyOpenAtStartup(Boolean(enabled));
+  });
+
+  ipcMain.handle('app:set-show-window-hotkey', (_event, hotkey: unknown) => {
+    if (typeof hotkey !== 'string') {
+      return false;
+    }
+    return registerShowWindowHotkey(hotkey);
+  });
 }
 
 async function createWindow(): Promise<void> {
@@ -318,6 +446,8 @@ async function createWindow(): Promise<void> {
   const port = Number(new URL(url).port) || 3000;
 
   await waitForServer(port);
+  await syncOpenAtStartupFromConfig();
+  await syncShowWindowHotkeyFromConfig();
 
   const win = new BrowserWindow({
     width: windowConfig.width,
@@ -401,5 +531,6 @@ app.on('window-all-closed', () => {
 
 app.on('before-quit', () => {
   isQuitting = true;
+  globalShortcut.unregisterAll();
   serverProcess?.kill();
 });

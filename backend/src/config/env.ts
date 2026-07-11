@@ -34,6 +34,8 @@ export const env = {
   frontendDist: path.join(projectRoot, 'frontend', 'dist'),
   dataDir: process.env.DATA_DIR || path.join(projectRoot, 'data'),
   backupDir: process.env.BACKUP_DIR || path.join(projectRoot, 'data', 'db-bak'),
+  logsDir: process.env.LOGS_DIR || path.join(projectRoot, 'logs'),
+  logsRetentionDays: Number(process.env.LOG_RETENTION_DAYS) || 7,
 } as const;
 
 export function assertDatabaseConfig(): void {

@@ -19,6 +19,8 @@ const ALL_MIGRATION_NAMES = [
   '0003_close_to_tray_on_close',
   '0004_backup_tables',
   '0005_notebook_tables',
+  '0006_open_at_startup',
+  '0007_show_window_hotkey',
 ] as const;
 
 const INITIAL_MIGRATION_STATEMENTS = [
@@ -231,6 +233,7 @@ async function ensureDefaultConfig(): Promise<void> {
       clipboardMonitoring: false,
       clipboardMaxLength: 1000,
       closeToTrayOnClose: true,
+      openAtStartup: true,
     })
     .onConflictDoNothing();
 }
@@ -257,6 +260,30 @@ async function ensureBackupTablesColumn(): Promise<void> {
       ADD COLUMN IF NOT EXISTS backup_tables JSONB NOT NULL DEFAULT '[]'::jsonb`,
   ]);
   await markMigration('0004_backup_tables');
+}
+
+async function ensureOpenAtStartupColumn(): Promise<void> {
+  if (await hasMigration('0006_open_at_startup')) {
+    return;
+  }
+
+  await executeStatements([
+    `ALTER TABLE app_config
+      ADD COLUMN IF NOT EXISTS open_at_startup BOOLEAN NOT NULL DEFAULT TRUE`,
+  ]);
+  await markMigration('0006_open_at_startup');
+}
+
+async function ensureShowWindowHotkeyColumn(): Promise<void> {
+  if (await hasMigration('0007_show_window_hotkey')) {
+    return;
+  }
+
+  await executeStatements([
+    `ALTER TABLE app_config
+      ADD COLUMN IF NOT EXISTS show_window_hotkey TEXT NOT NULL DEFAULT ''`,
+  ]);
+  await markMigration('0007_show_window_hotkey');
 }
 
 async function ensureNotebookTables(): Promise<void> {
@@ -358,6 +385,8 @@ async function runMigrationsInternal(): Promise<void> {
   await ensureCloseToTrayColumn();
   await ensureBackupTablesColumn();
   await ensureNotebookTables();
+  await ensureOpenAtStartupColumn();
+  await ensureShowWindowHotkeyColumn();
   await ensureDefaultConfig();
 }
 

@@ -93,7 +93,9 @@ export interface AppConfig {
   clipboard_monitoring?: boolean;
   clipboard_max_length?: number;
   close_to_tray_on_close?: boolean;
+  open_at_startup?: boolean;
   backup_tables?: string[];
+  show_window_hotkey?: string;
   [key: string]: boolean | number | string | string[] | undefined;
 }
 
