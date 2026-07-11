@@ -456,6 +456,9 @@ async function createWindow(): Promise<void> {
     minHeight: windowConfig.minHeight,
     title: windowConfig.title,
     frame: false,
+    transparent: true,
+    backgroundColor: '#00000000',
+    roundedCorners: false,
     show: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),

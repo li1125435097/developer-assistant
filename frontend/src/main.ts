@@ -9,6 +9,10 @@ import App from './App.vue';
 import router from './router';
 import './styles/index.scss';
 
+if (window.electronAPI?.isElectron) {
+  document.documentElement.classList.add('is-electron');
+}
+
 const app = createApp(App);
 
 for (const [key, component] of Object.entries(ElementPlusIconsVue)) {

@@ -119,3 +119,9 @@ onUnmounted(() => {
   removeMaximizeListener?.();
 });
 </script>
+
+<style scoped lang="scss">
+.title-bar:not(.is-maximized) .title-bar-btn-close {
+  border-top-right-radius: 8px;
+}
+</style>

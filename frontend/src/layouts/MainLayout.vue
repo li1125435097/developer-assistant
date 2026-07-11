@@ -1,5 +1,5 @@
 <template>
-  <div class="app-shell">
+  <div class="app-shell" :class="{ 'is-electron': isElectron }">
     <TitleBar v-if="isElectron" title="开发者脚本助手" />
     <el-container class="layout-container">
     <el-aside :width="asideWidth" class="layout-aside">

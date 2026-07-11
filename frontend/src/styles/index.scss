@@ -5,11 +5,26 @@ body,
   height: 100%;
 }
 
+html.is-electron,
+html.is-electron body,
+html.is-electron #app {
+  background: transparent;
+}
+
 .app-shell {
   display: flex;
   flex-direction: column;
   height: 100vh;
   overflow: hidden;
+
+  &.is-electron {
+    border-radius: 8px;
+    background: var(--el-bg-color);
+
+    &:has(.title-bar.is-maximized) {
+      border-radius: 0;
+    }
+  }
 }
 
 .layout-container {
