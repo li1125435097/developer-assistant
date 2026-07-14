@@ -6,9 +6,9 @@
   "main": "backend/dist/index.js",
   "scripts": {
     "start": "node backend/dist/index.js",
-    "dev": "tsx watch backend/src/index.ts",
+    "dev": "cross-env DATABASE_DIR=./data/pglite DATA_DIR=./data BACKUP_DIR=./data/db-bak LEGACY_DATABASE_PATH=./data/db.json LOGS_DIR=./logs tsx watch backend/src/index.ts",
     "dev:frontend": "npm run dev --prefix frontend",
-    "dev:electron": "npm run start --prefix electron",
+    "dev:electron": "cross-env NODE_ENV=dev APP_URL=http://localhost:5173 npm run start --prefix electron",
     "dev:agent": "npm run dev --prefix agent",
     "build:agent": "npm run build --prefix agent",
     "agent:demo": "npm run demo --prefix agent",
@@ -39,6 +39,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.15.30",
+    "cross-env": "^10.1.0",
     "drizzle-kit": "^0.31.1",
     "tsx": "^4.19.4",
     "typescript": "^5.8.3"

@@ -461,7 +461,7 @@ async function createWindow(): Promise<void> {
   appServerUrl = url;
   const port = Number(new URL(url).port) || 3000;
 
-  await waitForServer(port);
+  if(process.env.NODE_ENV !== 'dev') await waitForServer(port);
   await syncOpenAtStartupFromConfig();
   await syncShowWindowHotkeyFromConfig();
 
@@ -532,7 +532,9 @@ async function createWindow(): Promise<void> {
 app.whenReady().then(() => {
   Menu.setApplicationMenu(null);
   registerWindowIpc();
-  startServer();
+  if (process.env.NODE_ENV !== 'dev') {
+    startServer();
+  }
   void createWindow();
 
   app.on('activate', () => {

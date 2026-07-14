@@ -44,6 +44,31 @@ function escapeSqlString(value: string): string {
   return value.replace(/'/g, "''");
 }
 
+function formatSqlString(value: string): string {
+  const needsEscapeSyntax = /[\n\r\t\\]/.test(value);
+  if (!needsEscapeSyntax) {
+    return `'${escapeSqlString(value)}'`;
+  }
+  const escaped = value
+    .replace(/\\/g, '\\\\')
+    .replace(/'/g, "''")
+    .replace(/\n/g, '\\n')
+    .replace(/\r/g, '\\r')
+    .replace(/\t/g, '\\t');
+  return `E'${escaped}'`;
+}
+
+function isJsonbColumn(column: TableColumnRow): boolean {
+  return column.data_type === 'jsonb' || column.udt_name === 'jsonb';
+}
+
+function formatColumnValue(column: TableColumnRow, value: unknown): string {
+  if (isJsonbColumn(column)) {
+    return formatSqlString(JSON.stringify(value));
+  }
+  return formatSqlValue(value);
+}
+
 function formatSqlValue(value: unknown): string {
   if (value === null || value === undefined) {
     return 'NULL';
@@ -55,12 +80,12 @@ function formatSqlValue(value: unknown): string {
     return Number.isFinite(value) ? String(value) : 'NULL';
   }
   if (value instanceof Date) {
-    return `'${escapeSqlString(value.toISOString())}'`;
+    return formatSqlString(value.toISOString());
   }
   if (typeof value === 'object') {
-    return `'${escapeSqlString(JSON.stringify(value))}'`;
+    return formatSqlString(JSON.stringify(value));
   }
-  return `'${escapeSqlString(String(value))}'`;
+  return formatSqlString(String(value));
 }
 
 function formatColumnType(column: TableColumnRow): string {
@@ -137,7 +162,7 @@ async function exportTableSql(tableName: string): Promise<string> {
 
   const columnNames = columns.map((column) => column.column_name);
   for (const row of rows) {
-    const values = columnNames.map((columnName) => formatSqlValue(row[columnName]));
+    const values = columns.map((column) => formatColumnValue(column, row[column.column_name]));
     lines.push(
       `INSERT INTO ${tableName} (${columnNames.join(', ')}) VALUES (${values.join(', ')});`,
     );
@@ -293,35 +318,244 @@ export function getLatestBackupFile(): string | null {
 function parseSqlStatements(content: string): string[] {
   const statements: string[] = [];
   let current = '';
+  let inString = false;
+  let escapeString = false;
 
-  for (const line of content.split('\n')) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith('--')) {
+  for (let i = 0; i < content.length; i++) {
+    const char = content[i];
+
+    if (!inString && char === '-' && content[i + 1] === '-') {
+      i += 2;
+      while (i < content.length && content[i] !== '\n') {
+        i++;
+      }
       continue;
     }
 
-    current += `${line}\n`;
-    if (trimmed.endsWith(';')) {
-      statements.push(current.trim());
+    if (char === "'") {
+      if (inString) {
+        current += char;
+        if (content[i + 1] === "'") {
+          current += content[i + 1];
+          i += 1;
+          continue;
+        }
+        inString = false;
+        escapeString = false;
+        continue;
+      }
+      escapeString = current.endsWith('E');
+      inString = true;
+      current += char;
+      continue;
+    }
+
+    if (inString && escapeString && char === '\\') {
+      current += char;
+      if (i + 1 < content.length) {
+        current += content[i + 1];
+        i += 1;
+      }
+      continue;
+    }
+
+    current += char;
+
+    if (char === ';' && !inString) {
+      const statement = current.trim();
+      if (statement) {
+        statements.push(statement);
+      }
       current = '';
     }
   }
 
-  if (current.trim()) {
-    statements.push(current.trim());
+  const remaining = current.trim();
+  if (remaining) {
+    statements.push(remaining);
   }
 
   return statements;
+}
+
+const INSERT_STATEMENT_PATTERN = /^INSERT INTO ([a-z_][a-z0-9_]*) \(([^)]+)\) VALUES \(([\s\S]+)\);?$/i;
+const tableColumnCache = new Map<string, TableColumnRow[]>();
+
+function decodeSqlString(literal: string): string {
+  const trimmed = literal.trim();
+  let escapeSyntax = false;
+  let source = trimmed;
+
+  if (source.startsWith("E'") && source.endsWith("'")) {
+    escapeSyntax = true;
+    source = source.slice(2, -1);
+  } else if (source.startsWith("'") && source.endsWith("'")) {
+    source = source.slice(1, -1);
+  } else {
+    return trimmed;
+  }
+
+  let result = '';
+  for (let i = 0; i < source.length; i++) {
+    const char = source[i];
+    if (char === "'") {
+      if (source[i + 1] === "'") {
+        result += "'";
+        i += 1;
+        continue;
+      }
+      result += "'";
+      continue;
+    }
+    if (escapeSyntax && char === '\\' && i + 1 < source.length) {
+      const next = source[i + 1];
+      if (next === 'n') {
+        result += '\n';
+      } else if (next === 'r') {
+        result += '\r';
+      } else if (next === 't') {
+        result += '\t';
+      } else if (next === '\\') {
+        result += '\\';
+      } else {
+        result += next;
+      }
+      i += 1;
+      continue;
+    }
+    result += char;
+  }
+  return result;
+}
+
+function parseSqlValueList(source: string): string[] {
+  const values: string[] = [];
+  let current = '';
+  let inString = false;
+  let escapeString = false;
+
+  for (let i = 0; i < source.length; i++) {
+    const char = source[i];
+
+    if (char === "'") {
+      if (inString) {
+        current += char;
+        if (source[i + 1] === "'") {
+          current += source[i + 1];
+          i += 1;
+          continue;
+        }
+        inString = false;
+        escapeString = false;
+        continue;
+      }
+      escapeString = current.trimEnd().endsWith('E');
+      inString = true;
+      current += char;
+      continue;
+    }
+
+    if (inString && escapeString && char === '\\') {
+      current += char;
+      if (i + 1 < source.length) {
+        current += source[i + 1];
+        i += 1;
+      }
+      continue;
+    }
+
+    if (char === ',' && !inString) {
+      values.push(current.trim());
+      current = '';
+      continue;
+    }
+
+    current += char;
+  }
+
+  if (current.trim()) {
+    values.push(current.trim());
+  }
+
+  return values;
+}
+
+function isValidJsonText(value: string): boolean {
+  try {
+    JSON.parse(value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function repairJsonbInsertValues(
+  columns: string[],
+  values: string[],
+  columnMeta: Map<string, TableColumnRow>,
+): string[] {
+  return values.map((rawValue, index) => {
+    const column = columnMeta.get(columns[index] ?? '');
+    if (!column || !isJsonbColumn(column)) {
+      return rawValue;
+    }
+
+    const trimmed = rawValue.trim();
+    if (!trimmed.startsWith("'")) {
+      return rawValue;
+    }
+
+    const decoded = decodeSqlString(trimmed);
+    if (isValidJsonText(decoded)) {
+      return rawValue;
+    }
+
+    return formatSqlString(JSON.stringify(decoded));
+  });
+}
+
+async function getTableColumnsCached(tableName: string): Promise<TableColumnRow[]> {
+  if (!tableColumnCache.has(tableName)) {
+    tableColumnCache.set(tableName, await getTableColumns(tableName));
+  }
+  return tableColumnCache.get(tableName) ?? [];
+}
+
+async function repairInsertStatement(statement: string): Promise<string | null> {
+  const match = statement.match(INSERT_STATEMENT_PATTERN);
+  if (!match) {
+    return null;
+  }
+
+  const tableName = match[1];
+  assertValidTableName(tableName);
+  const columns = match[2].split(',').map((column) => column.trim());
+  const values = parseSqlValueList(match[3]);
+  if (values.length !== columns.length) {
+    return null;
+  }
+
+  const columnRows = await getTableColumnsCached(tableName);
+  const columnMeta = new Map(columnRows.map((column) => [column.column_name, column]));
+  const repairedValues = repairJsonbInsertValues(columns, values, columnMeta);
+  const changed = repairedValues.some((value, index) => value !== values[index]);
+  if (!changed) {
+    return null;
+  }
+
+  return `INSERT INTO ${tableName} (${columns.join(', ')}) VALUES (${repairedValues.join(', ')})`;
 }
 
 export async function importSqlFile(filePath: string, strict = false): Promise<void> {
   const content = fs.readFileSync(filePath, 'utf8');
   const statements = parseSqlStatements(content);
   const database = getDb();
+  tableColumnCache.clear();
 
   for (const statement of statements) {
     try {
-      await database.execute(sql.raw(statement));
+      const repaired = await repairInsertStatement(statement);
+      await database.execute(sql.raw(repaired ?? statement));
     } catch (error) {
       if (strict) {
         throw error;

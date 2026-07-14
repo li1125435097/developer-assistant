@@ -14,6 +14,15 @@ function resolveDatabaseMode(): DatabaseMode {
   return 'pglite';
 }
 
+/** Resolve env paths relative to project root so cwd / inherited env cannot drift. */
+function resolveProjectPath(value: string | undefined, fallbackSegments: string[]): string {
+  const fallback = path.join(projectRoot, ...fallbackSegments);
+  if (!value) {
+    return fallback;
+  }
+  return path.isAbsolute(value) ? value : path.resolve(projectRoot, value);
+}
+
 const databaseMode = resolveDatabaseMode();
 
 export const env = {
@@ -21,20 +30,16 @@ export const env = {
   database: {
     mode: databaseMode,
     /** PGlite 数据目录（仅 pglite 模式） */
-    pgliteDir:
-      process.env.DATABASE_DIR ||
-      path.join(projectRoot, 'data', 'pglite'),
+    pgliteDir: resolveProjectPath(process.env.DATABASE_DIR, ['data', 'pglite']),
     /** 远程 PostgreSQL 连接串（仅 postgres 模式） */
     url: process.env.DATABASE_URL,
     /** 旧版 lowdb JSON 文件路径，用于首次迁移 */
-    legacyJsonPath:
-      process.env.LEGACY_DATABASE_PATH ||
-      path.join(projectRoot, 'data', 'db.json'),
+    legacyJsonPath: resolveProjectPath(process.env.LEGACY_DATABASE_PATH, ['data', 'db.json']),
   },
   frontendDist: path.join(projectRoot, 'frontend', 'dist'),
-  dataDir: process.env.DATA_DIR || path.join(projectRoot, 'data'),
-  backupDir: process.env.BACKUP_DIR || path.join(projectRoot, 'data', 'db-bak'),
-  logsDir: process.env.LOGS_DIR || path.join(projectRoot, 'logs'),
+  dataDir: resolveProjectPath(process.env.DATA_DIR, ['data']),
+  backupDir: resolveProjectPath(process.env.BACKUP_DIR, ['data', 'db-bak']),
+  logsDir: resolveProjectPath(process.env.LOGS_DIR, ['logs']),
   logsRetentionDays: Number(process.env.LOG_RETENTION_DAYS) || 7,
 } as const;
 

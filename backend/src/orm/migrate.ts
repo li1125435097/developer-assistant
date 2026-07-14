@@ -13,16 +13,6 @@ import { getLatestBackupFile, importSqlFile } from '../services/backup.service.j
 
 const MIGRATIONS_TABLE = 'schema_migrations';
 
-const ALL_MIGRATION_NAMES = [
-  '0001_initial',
-  '0002_legacy_json_import',
-  '0003_close_to_tray_on_close',
-  '0004_backup_tables',
-  '0005_notebook_tables',
-  '0006_open_at_startup',
-  '0007_show_window_hotkey',
-] as const;
-
 const INITIAL_MIGRATION_STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS scripts (
     id SERIAL PRIMARY KEY,
@@ -325,12 +315,6 @@ async function ensureMigrationsTable(): Promise<void> {
   `));
 }
 
-async function markAllMigrationsApplied(): Promise<void> {
-  for (const name of ALL_MIGRATION_NAMES) {
-    await markMigration(name);
-  }
-}
-
 function isDatabaseCorruptionError(error: unknown): boolean {
   if (!error || typeof error !== 'object') {
     return false;
@@ -350,25 +334,44 @@ function isDatabaseCorruptionError(error: unknown): boolean {
   );
 }
 
-async function recoverCorruptedDatabase(): Promise<void> {
-  console.warn('检测到 PGlite 数据库损坏，正在删除数据目录并重建...');
-
+async function resetPgliteDatabase(): Promise<void> {
   await closeDatabase();
+  // Give Windows a moment to release file handles before deleting.
+  await new Promise((resolve) => setTimeout(resolve, 100));
   deletePgliteDataDir();
   await initDatabase();
+}
+
+async function recoverCorruptedDatabase(): Promise<void> {
+  console.warn(
+    `检测到 PGlite 数据库损坏，正在删除数据目录并重建... (${env.database.pgliteDir})`,
+  );
+
+  try {
+    await resetPgliteDatabase();
+  } catch (error) {
+    throw new Error(
+      `重建 PGlite 失败，请确认没有其他进程（如已安装的 Electron 应用）正在使用同一数据目录: ${env.database.pgliteDir}`,
+      { cause: error },
+    );
+  }
 
   const latestBackup = getLatestBackupFile();
   if (latestBackup) {
-    console.info(`正在从最新备份恢复: ${latestBackup}`);
-    await importSqlFile(latestBackup);
-    await ensureMigrationsTable();
-    await markAllMigrationsApplied();
-    await ensureDefaultConfig();
-    console.info('数据库已从备份恢复完成');
-    return;
+    try {
+      console.info(`正在从最新备份恢复: ${latestBackup}`);
+      await importSqlFile(latestBackup);
+      await runMigrationsInternal();
+      console.info('数据库已从备份恢复完成');
+      return;
+    } catch (error) {
+      console.warn('从备份恢复失败，将使用空数据库重新初始化:', error);
+      await resetPgliteDatabase();
+    }
+  } else {
+    console.warn('未找到可用备份，将使用空数据库重新初始化');
   }
 
-  console.warn('未找到可用备份，将使用空数据库重新初始化');
   await runMigrationsInternal();
 }
 

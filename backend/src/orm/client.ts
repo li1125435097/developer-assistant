@@ -68,7 +68,25 @@ export function deletePgliteDataDir(): void {
   if (env.database.mode !== 'pglite') {
     return;
   }
-  if (fs.existsSync(env.database.pgliteDir)) {
-    fs.rmSync(env.database.pgliteDir, { recursive: true, force: true });
+  if (!fs.existsSync(env.database.pgliteDir)) {
+    return;
   }
+
+  const target = env.database.pgliteDir;
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= 5; attempt++) {
+    try {
+      fs.rmSync(target, { recursive: true, force: true });
+      if (!fs.existsSync(target)) {
+        return;
+      }
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw new Error(
+    `无法删除 PGlite 数据目录（可能被其他进程占用）: ${target}` +
+      (lastError instanceof Error ? ` (${lastError.message})` : ''),
+  );
 }
