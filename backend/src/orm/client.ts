@@ -42,7 +42,11 @@ export async function initDatabase(): Promise<Database> {
 
 export async function closeDatabase(): Promise<void> {
   if (pgliteClient) {
-    await pgliteClient.close();
+    try {
+      await pgliteClient.close();
+    } catch {
+      // Failed-to-init clients throw on close(); still release the handle so recovery can delete the data dir.
+    }
     pgliteClient = null;
   }
   if (postgresClient) {

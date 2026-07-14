@@ -330,7 +330,9 @@ function isDatabaseCorruptionError(error: unknown): boolean {
     (message) =>
       message.includes('Aborted') ||
       message.includes('RuntimeError') ||
-      message.includes('database disk image is malformed'),
+      message.includes('database disk image is malformed') ||
+      // Minor PGlite upgrades (e.g. 0.3→0.5 / PG17→18) cannot open the old data dir.
+      message.includes('PGlite failed to initialize properly'),
   );
 }
 
@@ -344,7 +346,7 @@ async function resetPgliteDatabase(): Promise<void> {
 
 async function recoverCorruptedDatabase(): Promise<void> {
   console.warn(
-    `检测到 PGlite 数据库损坏，正在删除数据目录并重建... (${env.database.pgliteDir})`,
+    `检测到 PGlite 数据目录不可用（损坏或版本不兼容），正在删除并重建... (${env.database.pgliteDir})`,
   );
 
   try {
