@@ -1,20 +1,36 @@
 # developer-assistant
 
-开发者脚本助手 — 通过 Web 界面管理和执行常用开发脚本。
+开发助手 — 本地脚本管理与执行工具，支持 Web 与 Electron 桌面端。
 
 ## 功能
 
-- **脚本管理**：列表展示所有脚本（名称、描述、操作）
-- **添加脚本**：支持多个动作，每个动作包含名称和脚本内容
-- **动态变量**：脚本中可使用 `{{变量名}}` 格式，执行前弹窗收集输入
-- **执行脚本**：通过 `child_process.exec` 运行，成功 Toast 提示，失败弹窗显示日志
-- **数据存储**：脚本及动作列表以 JSON 格式存入 LowDB 文件数据库
+- **脚本管理**：增删改查脚本与多动作；支持 `{{变量名}}`，执行前弹窗收集输入
+- **执行历史**：记录每次脚本执行结果，可查看详情或清空
+- **剪切板记录**：后台监听剪切板变化并持久化，可配置开关与保留策略
+- **记事本**：富文本笔记，支持标签与置顶
+- **系统设置**：应用配置、定时备份表选择、从备份恢复数据、显示/隐藏窗口快捷键（桌面端）
+- **数据备份**：定时导出选中表到 `data/db-bak`，异常时可一键恢复
 
 ## 技术栈
 
-- 后端：Node.js + Fastify
-- 前端：Vue 3 + Vite + Element Plus（前后端分离）
-- 数据库：LowDB（JSON 文件）
+| 层 | 技术 |
+|----|------|
+| 后端 | Node.js + Fastify + TypeScript |
+| 前端 | Vue 3 + Vite + Element Plus + Vue Router |
+| 数据库 | PGlite（默认嵌入式）/ PostgreSQL，Drizzle ORM |
+| 桌面端 | Electron |
+
+## 项目结构
+
+```
+├── backend/          # Fastify API、ORM、备份与业务服务
+├── frontend/         # Vue 3 Web UI
+├── electron/         # Electron 壳，内嵌后端
+├── agent/            # 可选：基于 Ollama 的 LangChain Agent（实验）
+├── data/             # 运行时数据（PGlite、备份等，不入库）
+├── logs/             # 服务日志
+└── release/          # 发布安装包
+```
 
 ## 快速开始
 
@@ -22,6 +38,8 @@
 
 ```bash
 npm install
+npm install --prefix frontend
+npm install --prefix electron   # 需要桌面端时
 ```
 
 ### 2. 配置环境变量（可选）
@@ -30,39 +48,73 @@ npm install
 cp .env.example .env
 ```
 
-默认数据库文件为 `data/db.json`，首次启动自动创建。
+常用变量：
+
+| 变量 | 说明 | 默认 |
+|------|------|------|
+| `PORT` | API 端口 | `3000` |
+| `DATABASE_MODE` | `pglite` 或 `postgres` | `pglite` |
+| `DATABASE_DIR` | PGlite 数据目录 | `./data/pglite` |
+| `DATABASE_URL` | 远程 PostgreSQL 连接串（`postgres` 模式必填） | — |
+| `LEGACY_DATABASE_PATH` | 旧版 LowDB JSON，首次启动自动导入 | `./data/db.json` |
+| `BACKUP_DIR` | SQL 备份目录 | `./data/db-bak` |
+| `LOGS_DIR` | 日志目录 | `./logs` |
 
 ### 3. 开发模式
 
-前后端分离开发，需分别启动：
-
 ```bash
-# 终端 1：启动后端 API（端口 3000）
+# 终端 1：后端 API（端口 3000，tsx watch）
 npm run dev
 
-# 终端 2：启动前端开发服务器（端口 5173，自动代理 /api）
+# 终端 2：前端（端口 5173，代理 /api）
 npm run dev:frontend
+
+# 可选：Electron 壳（需前端已启动）
+npm run dev:electron
 ```
 
 访问 http://localhost:5173
 
-### 4. 生产模式
+### 4. Web 生产模式
 
 ```bash
+npm run build:backend
 npm run build:frontend
 npm start
 ```
 
-访问 http://localhost:3000
+访问 http://localhost:3000（后端同时提供静态前端）
 
-## API
+### 5. 打包桌面端
 
-| 方法 | 路径 | 说明 |
+```bash
+# 先构建并同步前端/后端到 electron 运行时
+npm run move
+
+# Windows / macOS / Linux
+npm run build:electron:win
+npm run build:electron:mac
+npm run build:electron:linux
+```
+
+产物在 `electron/release/`；对外发布包也可放在根目录 `release/`。
+
+### 数据库相关
+
+```bash
+npm run db:generate   # 根据 schema 生成迁移
+npm run db:push       # 推送 schema 到当前库
+```
+
+## API 概览
+
+| 模块 | 前缀 | 说明 |
 |------|------|------|
-| GET | `/api/scripts` | 获取所有脚本 |
-| POST | `/api/scripts` | 添加脚本 |
-| GET | `/api/scripts/:id/actions/:actionIndex/variables` | 获取动作中的动态变量 |
-| POST | `/api/scripts/:id/execute` | 执行脚本 |
+| 脚本 | `/api/scripts` | CRUD、解析动作变量、执行 |
+| 历史 | `/api/history` | 列表、详情、删除、清空 |
+| 剪切板 | `/api/clipboard` | 配置、列表、详情、删除、清空 |
+| 记事本 | `/api/notebooks` | CRUD、标签、置顶 |
+| 设置 | `/api/settings` | 应用配置、表列表、备份恢复 |
 
 ### 添加脚本示例
 
