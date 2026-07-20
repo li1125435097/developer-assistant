@@ -1,6 +1,6 @@
 {
   "name": "developer-assistant",
-  "version": "1.0.0",
+  "version": "1.1.1",
   "description": "开发者脚本助手",
   "type": "module",
   "main": "backend/dist/index.js",

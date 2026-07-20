@@ -546,6 +546,36 @@ async function repairInsertStatement(statement: string): Promise<string | null> 
   return `INSERT INTO ${tableName} (${columns.join(', ')}) VALUES (${repairedValues.join(', ')})`;
 }
 
+/**
+ * After INSERT with explicit ids (e.g. backup restore), SERIAL sequences stay
+ * behind MAX(id) and the next default insert hits a PK conflict. Sync them.
+ */
+export async function syncSerialSequences(): Promise<void> {
+  const database = getDb();
+  const result = await database.execute(sql`
+    SELECT table_name, column_name
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND column_default LIKE 'nextval(%'
+    ORDER BY table_name, column_name
+  `);
+
+  const sequences = getExecuteRows<{ table_name: string; column_name: string }>(result);
+  for (const { table_name: tableName, column_name: columnName } of sequences) {
+    assertValidTableName(tableName);
+    if (!TABLE_NAME_PATTERN.test(columnName)) {
+      continue;
+    }
+    await database.execute(sql.raw(`
+      SELECT setval(
+        pg_get_serial_sequence('${tableName}', '${columnName}'),
+        COALESCE((SELECT MAX(${columnName}) FROM ${tableName}), 1),
+        (SELECT MAX(${columnName}) FROM ${tableName}) IS NOT NULL
+      )
+    `));
+  }
+}
+
 export async function importSqlFile(filePath: string, strict = false): Promise<void> {
   const content = fs.readFileSync(filePath, 'utf8');
   const statements = parseSqlStatements(content);
@@ -563,6 +593,8 @@ export async function importSqlFile(filePath: string, strict = false): Promise<v
       console.warn('导入 SQL 语句失败，已跳过:', statement.slice(0, 120), error);
     }
   }
+
+  await syncSerialSequences();
 }
 
 const SYSTEM_TABLES = new Set(['schema_migrations']);

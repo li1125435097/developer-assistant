@@ -9,7 +9,11 @@ import {
   initDatabase,
 } from './client.js';
 import { appConfig, clipboardRecords, executions, scripts } from './schema/index.js';
-import { getLatestBackupFile, importSqlFile } from '../services/backup.service.js';
+import {
+  getLatestBackupFile,
+  importSqlFile,
+  syncSerialSequences,
+} from '../services/backup.service.js';
 
 const MIGRATIONS_TABLE = 'schema_migrations';
 
@@ -331,6 +335,7 @@ function isDatabaseCorruptionError(error: unknown): boolean {
       message.includes('Aborted') ||
       message.includes('RuntimeError') ||
       message.includes('database disk image is malformed') ||
+      message.includes('could not open file') ||
       // Minor PGlite upgrades (e.g. 0.3→0.5 / PG17→18) cannot open the old data dir.
       message.includes('PGlite failed to initialize properly'),
   );
@@ -393,6 +398,8 @@ async function runMigrationsInternal(): Promise<void> {
   await ensureOpenAtStartupColumn();
   await ensureShowWindowHotkeyColumn();
   await ensureDefaultConfig();
+  // Backup restores insert explicit ids without advancing SERIAL sequences.
+  await syncSerialSequences();
 }
 
 export async function runMigrations(): Promise<void> {
