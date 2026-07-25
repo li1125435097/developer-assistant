@@ -1,4 +1,5 @@
 import type { Skill } from "./types.js";
+import { ZENTAO_MCP_SERVER_NAME } from "../mcp/zentao.js";
 
 export const zentaoSkill: Skill = {
   id: "zentao",
@@ -18,6 +19,6 @@ export const zentaoSkill: Skill = {
       throw new Error("Zentao MCP is not enabled. Set ZENTAO_MCP_ENABLED=true.");
     }
 
-    return mcpClient.getTools();
+    return mcpClient.getTools(ZENTAO_MCP_SERVER_NAME);
   },
 };

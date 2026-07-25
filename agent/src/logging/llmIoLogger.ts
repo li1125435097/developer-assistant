@@ -230,7 +230,7 @@ export function createLlmIoCallbackHandler(): BaseCallbackHandler {
       const callId = llmCallCounter;
       const timestamp = formatTimestamp();
       const charStats = measureInputCharStats(messageBatches, extraParams);
-      return console.log(`\n========== LLM Input #${callId} [${timestamp}] ==========\n`,messageBatches);
+      const tools = extractTools(extraParams);
       logInput(`\n========== LLM Input #${callId} [${timestamp}] ==========`);
       logInput(formatInputCharStats(charStats));
 
@@ -239,6 +239,22 @@ export function createLlmIoCallbackHandler(): BaseCallbackHandler {
           logInput(`--- batch ${batchIndex + 1} ---`);
         }
         logInput(formatMessages(messages));
+      }
+
+      if (tools?.length) {
+        const toolNames = tools.map((entry) => {
+          if (entry && typeof entry === "object" && "function" in entry) {
+            const fn = (entry as { function?: { name?: string } }).function;
+            return fn?.name ?? "(unnamed)";
+          }
+          if (entry && typeof entry === "object" && "name" in entry) {
+            return String((entry as { name?: string }).name ?? "(unnamed)");
+          }
+          return "(unknown)";
+        });
+        logInput(`tools bound: ${toolNames.join(", ")}`);
+      } else {
+        logInput("tools bound: (none)");
       }
     }
 
@@ -264,7 +280,6 @@ export function createLlmIoCallbackHandler(): BaseCallbackHandler {
     handleLLMEnd(output: LLMResult) {
       const timestamp = formatTimestamp();
       const charStats = measureOutputCharStats(output);
-      return console.log(`\n========== LLM Output [${timestamp}] ==========\n`,output);
       logOutput(`\n========== LLM Output [${timestamp}] ==========`);
       logOutput(formatOutputCharStats(charStats));
       logOutput(formatLlmOutput(output));

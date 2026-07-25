@@ -1,9 +1,9 @@
 import { createAgent } from "langchain";
 import type { AnyAgentMiddleware } from "langchain";
 import type { StructuredToolInterface } from "@langchain/core/tools";
-import type { ChatOllama } from "@langchain/ollama";
+import type { ChatOpenAI } from "@langchain/openai";
 import type { MultiServerMCPClient } from "@langchain/mcp-adapters";
-import { createOllamaLLM } from "../llm.js";
+import { createLLM } from "../llm.js";
 import { createSkillMiddleware } from "../skills/index.js";
 import type { Skill } from "../skills/index.js";
 import { defaultTools } from "../tools/index.js";
@@ -13,10 +13,13 @@ const BASE_SYSTEM_PROMPT = `You are a developer assistant for the developer-assi
 Help users with scripting, automation, and developer workflows.
 Use tools when they help answer the question accurately.
 
-When a request matches a Skill in the catalog, call load_skill first, then use that Skill's tools.`;
+When a request matches a Skill in the catalog, you MUST call load_skill first, then use that Skill's tools.
+Do NOT answer from general product knowledge when a Skill can query live data or control a real system.
+For requests like 「列出浏览器窗口」「打开浏览器」「BitBrowser」, call load_skill({ skill_id: "bitbrowser" }) immediately.
+For requests like 「查询禅道bug」「我的任务」「未解决 Bug」, call load_skill({ skill_id: "zentao" }) immediately.`;
 
 export interface CreateDeveloperAgentOptions {
-  llm?: ChatOllama;
+  llm?: ChatOpenAI;
   tools?: StructuredToolInterface[];
   skills?: Skill[];
   mcpClient?: MultiServerMCPClient;
@@ -46,7 +49,7 @@ function buildMiddleware(
 }
 
 export function createDeveloperAgent(options: CreateDeveloperAgentOptions = {}) {
-  const llm = options.llm ?? createOllamaLLM();
+  const llm = options.llm ?? createLLM();
   const tools = options.tools ?? defaultTools;
   const middleware = buildMiddleware(options);
 

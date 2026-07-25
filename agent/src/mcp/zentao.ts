@@ -28,16 +28,20 @@ function resolveZentaoDevEntry(): string {
   return standaloneEntry;
 }
 
+export function getZentaoMcpServerConfig() {
+  return {
+    transport: "stdio" as const,
+    command: process.execPath,
+    args: [resolveZentaoDevEntry()],
+  };
+}
+
 export function createZentaoMcpClient(): MultiServerMCPClient {
   return new MultiServerMCPClient({
     prefixToolNameWithServerName: true,
     onConnectionError: "throw",
     mcpServers: {
-      [ZENTAO_MCP_SERVER_NAME]: {
-        transport: "stdio",
-        command: process.execPath,
-        args: [resolveZentaoDevEntry()],
-      },
+      [ZENTAO_MCP_SERVER_NAME]: getZentaoMcpServerConfig(),
     },
   });
 }

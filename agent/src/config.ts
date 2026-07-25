@@ -1,9 +1,11 @@
 export interface AgentConfig {
-  ollamaBaseUrl: string;
+  baseURL: string;
+  apiKey: string;
   model: string;
   temperature: number;
   zentaoMcpEnabled: boolean;
-  ollamaNumCtx: number;
+  bitbrowserMcpEnabled: boolean;
+  bitbrowserMcpUrl: string;
   llmIoLogEnabled: boolean;
 }
 
@@ -16,15 +18,22 @@ function parseBoolean(value: string | undefined, defaultValue: boolean): boolean
 }
 
 export function loadConfig(): AgentConfig {
-  const zentaoMcpEnabled = parseBoolean(process.env.ZENTAO_MCP_ENABLED, true);
+  const zentaoMcpEnabled = parseBoolean(process.env.ZENTAO_MCP_ENABLED, false);
+  const bitbrowserMcpEnabled = parseBoolean(
+    process.env.BITBROWSER_MCP_ENABLED,
+    true
+  );
 
   return {
-    ollamaBaseUrl: process.env.OLLAMA_BASE_URL ?? "http://127.0.0.1:11434",
-    model: process.env.OLLAMA_MODEL ?? "llama3.2",
-    temperature: Number(process.env.OLLAMA_TEMPERATURE ?? "0.2"),
+    // OpenAI 兼容接口（供 Agent 调用）
+    baseURL: process.env.OPENAI_BASE_URL ?? "http://localhost:5000/v1",
+    apiKey: process.env.OPENAI_API_KEY ?? "sk-autobrowser",
+    model: process.env.OPENAI_MODEL ?? "qwen-plus",
+    temperature: Number(process.env.OPENAI_TEMPERATURE ?? "0.2"),
     zentaoMcpEnabled,
-    // Skill 分层按需加载 MCP 工具，默认上下文可低于全量挂载 MCP 时
-    ollamaNumCtx: Number(process.env.OLLAMA_NUM_CTX ?? "8192"),
+    bitbrowserMcpEnabled,
+    bitbrowserMcpUrl:
+      process.env.BITBROWSER_MCP_URL ?? "http://127.0.0.1:54349/mcp",
     llmIoLogEnabled: parseBoolean(process.env.LLM_IO_LOG, true),
   };
 }

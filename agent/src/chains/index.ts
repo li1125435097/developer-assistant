@@ -1,7 +1,7 @@
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { StringOutputParser } from "@langchain/core/output_parsers";
-import type { ChatOllama } from "@langchain/ollama";
-import { createOllamaLLM } from "../llm.js";
+import type { ChatOpenAI } from "@langchain/openai";
+import { createLLM } from "../llm.js";
 
 const summarizePrompt = ChatPromptTemplate.fromMessages([
   [
@@ -11,6 +11,6 @@ const summarizePrompt = ChatPromptTemplate.fromMessages([
   ["human", "{text}"],
 ]);
 
-export function createSummarizeChain(llm: ChatOllama = createOllamaLLM()) {
+export function createSummarizeChain(llm: ChatOpenAI = createLLM()) {
   return summarizePrompt.pipe(llm).pipe(new StringOutputParser());
 }

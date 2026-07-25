@@ -1,5 +1,6 @@
 export type { Skill, SkillLoadContext } from "./types.js";
 export { zentaoSkill } from "./zentao.js";
+export { bitbrowserSkill } from "./bitbrowser.js";
 export { codeVerifySkill } from "./codeVerify.js";
 export {
   buildSkillCatalogPrompt,

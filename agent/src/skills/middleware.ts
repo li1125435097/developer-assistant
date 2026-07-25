@@ -9,7 +9,7 @@ import type { Skill } from "./types.js";
 
 const LOAD_SKILL_DESCRIPTION = `Activate a Skill to load its full instructions and tools for this conversation.
 
-Call this when the user's request clearly matches a Skill in the catalog (e.g. Zentao bugs/tasks, code build/test verification).
+Call this when the user's request clearly matches a Skill in the catalog (e.g. BitBrowser windows, Zentao bugs/tasks, code build/test verification).
 Do not activate Skills for unrelated chit-chat or questions answerable with base tools only.`;
 
 const skillStateSchema = z.object({
@@ -43,6 +43,26 @@ export function createSkillMiddleware(options: CreateSkillMiddlewareOptions) {
     return loaded;
   }
 
+  async function getActivatedSkillTools(
+    activated: string[]
+  ): Promise<StructuredToolInterface[]> {
+    const skillTools: StructuredToolInterface[] = [];
+
+    for (const skillId of activated) {
+      skillTools.push(...(await getSkillTools(skillId)));
+    }
+
+    return skillTools;
+  }
+
+  async function findActivatedSkillTool(
+    activated: string[],
+    toolName: string
+  ): Promise<StructuredToolInterface | undefined> {
+    const skillTools = await getActivatedSkillTools(activated);
+    return skillTools.find((skillTool) => skillTool.name === toolName);
+  }
+
   const loadSkillTool = tool(
     () => "Use wrapToolCall handler for load_skill execution.",
     {
@@ -61,59 +81,70 @@ export function createSkillMiddleware(options: CreateSkillMiddlewareOptions) {
     stateSchema: skillStateSchema,
     tools: [loadSkillTool],
     wrapToolCall: async (request, handler) => {
-      if (request.toolCall.name !== "load_skill") {
-        return handler(request);
-      }
+      if (request.toolCall.name === "load_skill") {
+        const args = request.toolCall.args as { skill_id?: string };
+        const skillId = args.skill_id?.trim();
 
-      const args = request.toolCall.args as { skill_id?: string };
-      const skillId = args.skill_id?.trim();
+        if (!skillId || !skillIds.has(skillId)) {
+          return new ToolMessage({
+            content: `Unknown skill "${skillId ?? ""}". Available: ${[...skillIds].join(", ")}`,
+            tool_call_id: request.toolCall.id ?? "",
+            name: "load_skill",
+          });
+        }
 
-      if (!skillId || !skillIds.has(skillId)) {
-        return new ToolMessage({
-          content: `Unknown skill "${skillId ?? ""}". Available: ${[...skillIds].join(", ")}`,
-          tool_call_id: request.toolCall.id ?? "",
-          name: "load_skill",
+        const skill = findSkill(skills, skillId)!;
+        const activated = request.state.activatedSkills ?? [];
+
+        if (activated.includes(skillId)) {
+          return new ToolMessage({
+            content: `Skill "${skill.name}" is already active.\n\n${skill.fullInstructions}`,
+            tool_call_id: request.toolCall.id ?? "",
+            name: "load_skill",
+          });
+        }
+
+        const skillTools = await getSkillTools(skillId);
+        const toolNames = skillTools.map((skillTool) => skillTool.name).join(", ");
+
+        return new Command({
+          update: {
+            activatedSkills: [...activated, skillId],
+            messages: [
+              new ToolMessage({
+                content: [
+                  `Skill "${skill.name}" activated.`,
+                  skill.fullInstructions,
+                  toolNames ? `\nAvailable tools: ${toolNames}` : "",
+                ].join("\n\n"),
+                tool_call_id: request.toolCall.id ?? "",
+                name: "load_skill",
+              }),
+            ],
+          },
         });
       }
 
-      const skill = findSkill(skills, skillId)!;
-      const activated = request.state.activatedSkills ?? [];
+      // Runtime-registered Skill tools are visible to the model via wrapModelCall,
+      // but ToolNode only knows about statically declared tools. Supply the
+      // implementation here so execution can reach MCP / Skill loaders.
+      if (!request.tool) {
+        const activated = request.state.activatedSkills ?? [];
+        const skillTool = await findActivatedSkillTool(
+          activated,
+          request.toolCall.name
+        );
 
-      if (activated.includes(skillId)) {
-        return new ToolMessage({
-          content: `Skill "${skill.name}" is already active.\n\n${skill.fullInstructions}`,
-          tool_call_id: request.toolCall.id ?? "",
-          name: "load_skill",
-        });
+        if (skillTool) {
+          return handler({ ...request, tool: skillTool });
+        }
       }
 
-      const skillTools = await getSkillTools(skillId);
-      const toolNames = skillTools.map((skillTool) => skillTool.name).join(", ");
-
-      return new Command({
-        update: {
-          activatedSkills: [...activated, skillId],
-          messages: [
-            new ToolMessage({
-              content: [
-                `Skill "${skill.name}" activated.`,
-                skill.fullInstructions,
-                toolNames ? `\nAvailable tools: ${toolNames}` : "",
-              ].join("\n\n"),
-              tool_call_id: request.toolCall.id ?? "",
-              name: "load_skill",
-            }),
-          ],
-        },
-      });
+      return handler(request);
     },
     wrapModelCall: async (request, handler) => {
       const activated = request.state.activatedSkills ?? [];
-      const skillTools: StructuredToolInterface[] = [];
-
-      for (const skillId of activated) {
-        skillTools.push(...(await getSkillTools(skillId)));
-      }
+      const skillTools = await getActivatedSkillTools(activated);
 
       const baseToolNames = new Set(request.tools.map((agentTool) => agentTool.name));
       const mergedTools = [
